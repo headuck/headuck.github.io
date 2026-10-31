@@ -28,13 +28,13 @@ concurrency:
 jobs:
   # Build job
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       # NEW: public content repo, no token needed
       - name: Checkout F-Droid repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: headuck/fdroid
           path: _fdroid
@@ -42,7 +42,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1' # Not needed with a .ruby-version file or Gemfile
+          ruby-version: '3.1.9' 
           bundler-cache: true # runs 'bundle install' and caches bundled gems
           cache-version: 0 # Increment this number if you need to re-download cached gems
       - name: Setup Pages
@@ -66,7 +66,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Deploy to GitHub Pages
