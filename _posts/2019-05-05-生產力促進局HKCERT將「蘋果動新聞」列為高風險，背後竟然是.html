@@ -1,0 +1,100 @@
+---
+layout: post
+title: "生產力促進局 HKCERT 將「蘋果動新聞」列為高風險，背後竟然是..."
+date: 2019-05-05 14:34:59
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1080
+---
+<p>生產力促進局轄下香港電腦保安事故協調中心（HKCERT），與國家互聯網應急中心（CNCERT）合作，因應 CNCERT 所提供的分析，在2019年4月發表的香港熱門Android Apps 保安風險報告報告，將《蘋果動新聞》及另外數個應用程式，列為高風險應用程式 [1]。</p>
+<p>小鴨作者得悉後，到 HKCERT 網頁看看背後的理據，即報告附錄 2 的「高風險應用程式深度分析」，學習一下。畢竟政府有計劃，鼓勵電話攔截App到「政府認可或指定的獨立認證機構」取得認證，而政府心目中的獨立認證機構，正正就是生產力促進局 [2]。</p>
+<p>但竟然，所謂深度分析，極其兒戲，「高風險」的罪證充其量只是對 App 反編繹得出的 Java 源碼做了些 keyword match，不但看不出有考慮程式行為就其性質而言，是否相稱及必要，部份分析更犯下與事實不符的低級錯誤，顯示分析者對 Android 系統以至 Java 系統，缺乏進行這類分析所需的基本認識，更顯示從 CNCERT 交到 HKCERT 、再到 HKCERT 發表報告，過程中似乎沒有做基本把關工作。</p>
+<!--more-->
+以下為報告中所指，App的高風險動作<br>
+<ul>
+ 	<li>獲取SIM卡服務供應商名稱</li>
+ 	<li>獲取SIM卡狀態</li>
+ 	<li>讀取手機號碼</li>
+ 	<li>通過連線訪問網絡</li>
+ 	<li>獲取網絡資料</li>
+ 	<li>獲取手機設備資料</li>
+ 	<li>傳送手機資料</li>
+</ul>
+<img class="aligncenter size-full wp-image-1101" src="/assets/uploads/2019/05/CaptureN.png" alt="" width="744" height="857" />
+<p style="text-align: center;">檢測結果截圖</p>
+而在「深度分析」中，HKCERT / CNCERT 列出反編繹的 Java 源碼，以顯示 App 進行有關行為的「罪證」。下文中的源碼截圖來自該「深度分析」。<br>
+<h2>指鹿為馬，低級錯誤</h2>
+指「蘋果動新聞」有「讀取手機號碼」的部份:<br>
+<img class="aligncenter size-full wp-image-1085" src="/assets/uploads/2019/05/Captureb.png" alt="" width="951" height="406" />
+<p>指另一隻App「RunRace 3D」「讀取手機號碼」的部份:</p>
+<img class="size-full wp-image-1082 alignnone" src="/assets/uploads/2019/05/Capturex.png" alt="" width="485" height="314" />
+以上<span style="text-decoration: underline;"><strong>完全是不符事實的低級錯誤</strong></span>，上述 getLineNumber() 明顯是屬於StackTraceElement 這個 class，這是Java 語言中是用作處理 Stacktrace [3]， 通常用於程式發生錯誤後，處理報錯，StackTraceElement 下的 getLineNumber() 是用以獲取有關出事的程式碼在 Java 源碼中的行號(Line Number)，與手機號碼風馬牛不相及。<br>
+<p>分析(檢索?)人員似乎混淆了上述在 Java 語言中的方法，與及在 Android framework 中真正可用於讀取手機號碼的方法，即是 TelephonyManager 這個 class 之下的 getLine1Number()。注意名稱串法有個「1」字 [4]。</p>
+<p>其實懂Java的人一看有限的前文後理，大致已看出是和 stacktrace 處理有關，而非讀取手機號碼。退一步說，所需的 TelephonyManager 這個 class 根本沒有出現，能出現這種事實錯誤的唯一合理解釋，是有關人員單是對源碼進行簡單的關鍵字檢索，而且還要串錯字 (getLine1Number 變成 getLineNumber)。</p>
+抽樣查看HKCERT之前的報告，亦發現此錯誤已非第一次出現。<br>
+<h2>合理及常用功能，不求甚解便列作高風險</h2>
+對這些App的另一高風險罪行，是「通過連線訪問網絡」:<br>
+<p>「蘋果動新聞」的源碼:</p>
+<img class="aligncenter size-full wp-image-1084" src="/assets/uploads/2019/05/Capturec.png" alt="" width="982" height="456" />
+<p>上述源碼確實是與從網絡取得資料相關（處理 HTTP 請求後返回的 status code），但問題時，為什麼存取互聯網，對一隻明顯是用於在網上看新聞的App而言，會是高風險 ? 事實上，在 200隻熱門App中，有幾多隻是不會存取互聯網的 ?</p>
+這份「深度分析」沒有動態分析以找出 App 上傳什麼內容到什麼地方的行為（如透過截取DNS請求或程式對外通訊），並根據 App 性質找出什麼上傳行為是不適當，單單是靜態地檢索了程式碼內含 HttpURLConnection 這個 Java 程式存取網絡用的 class，便列「通過連線訪問網絡」作為 App 屬高風險因素，這類「分析」完全無意義（其實單看該App需要 <span class="st">INTERNET</span> 授權，已知程式可以存取網絡），更帶來誤導效果。<br>
+<p>順帶一提，作者亦發現，「深度分析」指「Soul Knight」有「通過連線訪問網絡」，所列出的源碼卻是和網絡不相關的，</p>
+<img class="aligncenter size-full wp-image-1087" src="/assets/uploads/2019/05/Capturey.png" alt="" width="785" height="294" />
+<p>程式碼是在開啟 Android APK 檔內 (應屬廣告商程式庫) 的 Asset，或已存在手機內的指定檔案。不論是不認識 Android / Java 或是全段引用錯誤，都是不應出現的嚴重問題。</p>
+<p>另一「高風險」罪狀是「傳送手機資料」，所列例子為</p>
+<p>「蘋果動新聞」的源碼:</p>
+<img class="size-full wp-image-1083 alignnone" src="/assets/uploads/2019/05/Capturef.png" alt="" width="896" height="398" />
+<p>「Soul Knight」的源碼:（三國殺亦類似）</p>
+<img class="aligncenter size-full wp-image-1088" src="/assets/uploads/2019/05/Capturez.png" alt="" width="808" height="229" />
+<p>兩者其實是 Android 正常的 Intent.ACTION_SEND 機制 [5]，用處是將資料由一隻 App share 到另一隻 App，而後者會開啟。例如，「蘋果動新聞」那段，應是將資料 share 給 Facebook Messenger 而開啟後者（可能處理用戶按下 「Share to Facebook」 後的工作）。這段源碼亦很可能是 Facebook 提供的程式庫 MessengerUtils  中的一部份 [6]，被納入「蘋果動新聞」內。</p>
+<p>而「Soul Knight」及「三國殺」所引用的那段源碼，根本是屬於官方 Google 提供給 Android 開發者使用的程式庫 (android support v4 library) 中 android.support.v4.app.ShareCompat 類的源碼 [7]，大部份 Android App 都會用這個程式庫，竟被拿來當作高風險，再次印證 (1) 所謂分析可能只是搜索 "android.intent.action.SEND" 這組字，一出現便當高風險，不問前文後理及App性質，(2) 分析者對 Android 編程的認識。</p>
+和上面網絡權限一樣，分析只代表程式含有可能進行 share 到其他 App 這項 Android App 極常用的功能，沒有找出是在什麼情況 share 及有何不恰當之處，卻將此列為 App 的高風險因素，帶來誤導效果。<br>
+<h2>選擇性預警，未能讓人看見公正性</h2>
+所謂深入分析中，較與私隱相關的風險因素，是「發現」有關程式存取了「SIM卡資料/網絡資料/手機設備資料」，實際來說包括以下各項:<br>
+<ul>
+ 	<li>SIM卡服務供應商 MCC + MNC 碼 （發SIM卡的供應商，讀取此資料要 READ_PHONE_STATE 權限）</li>
+ 	<li>流動網絡供應商 MCC + MNC 碼 （正使用的網絡商，讀取此資料要READ_PHONE_STATE 權限）</li>
+ 	<li>手機 IMEI 碼 （手機獨一的ID，讀取此資料要 READ_PHONE_STATE 權限）</li>
+ 	<li>Wifi 的MAC Address （亦可當作手機獨一的ID，讀取此資料要ACCESS_WIFI_STATE 權限，一般經 wifi 上網不用此權限）</li>
+</ul>
+假設讀取上述資料都是用作上傳，這些確實會帶來私隱風險，尤其是可當作手機獨一 ID 的後兩項資料，因為 App 雖然不能單靠這些資料直接得悉用戶真實身份，卻可讓不同的 App 以及藏身 App 內的不同廣告商及資料分析商，共同追蹤及分享用戶在不同 App 的一舉一動，建立用戶的詳細資料profile，以收集數據及作針對性廣告。<br>
+<p>但不幸的是，App 的「業界」使用此等 ID 追蹤用戶，極為普遍，內含廣告或分析軟件的 App，很多時都會要求相關權限，供廣告商使用。這是另外一大議題。</p>
+<p>講返份報告，這次所列舉的行為，大致應沒有事實錯誤（但部份只根據開發者自訂的method名稱來判斷，仍是不謹慎的做法，亦再再反映分析只是 keyword 檢索的程度）。 問題在於，由於這是「業界」普遍問題，HKCERT 所檢查的最受歡迎的本地 App 當中，應有很多都會有同樣行為。</p>
+<p>為進一步驗證，作者找了 HKCERT 所提及，本地50隻免費App當中的(1) 淘寶lite （com.taobao.htao.android）及 (2) Alipay HK wallet （hk.alipay.wallet），再加上是次主角 (3) 蘋果動新聞（com.nextmedia）以及另一家同類但不在HKCERT名單的 (4) 某報（com.nxws.on），於內地的 Sanddroid 沙盒檢測的比較結果，比較一下上述較具私隱風險資料的取用情況，詳細結果鏈結如下：</p>
+Taobao<br>
+<a class="btn btn--inverse btn--large btn--pill" href="http://sanddroid.xjtu.edu.cn/report?apk_md5=18A3BAFB5E981D5C1FF1E6D0AAF4755B" target="_blank" rel="nofollow noopener" data-url="http://sanddroid.xjtu.edu.cn/report?apk_md5=18A3BAFB5E981D5C1FF1E6D0AAF4755B">http://sanddroid.xjtu.edu.cn/rep ... D5C1FF1E6D0AAF4755B</a>
+Alipay<br>
+<a class="btn btn--inverse btn--large btn--pill" href="http://sanddroid.xjtu.edu.cn/report?apk_md5=5FD5BB998DC72F276B606EF1B7FBF4EC" target="_blank" rel="nofollow noopener" data-url="http://sanddroid.xjtu.edu.cn/report?apk_md5=5FD5BB998DC72F276B606EF1B7FBF4EC">http://sanddroid.xjtu.edu.cn/rep ... F276B606EF1B7FBF4EC</a>
+蘋果動新聞<br>
+<a class="btn btn--inverse btn--large btn--pill" href="http://sanddroid.xjtu.edu.cn/report?apk_md5=AE7F16423A9B4A8DD3FDA784BF173245" target="_blank" rel="nofollow noopener" data-url="http://sanddroid.xjtu.edu.cn/report?apk_md5=AE7F16423A9B4A8DD3FDA784BF173245">http://sanddroid.xjtu.edu.cn/rep ... A8DD3FDA784BF173245</a>
+某報<br>
+<a class="btn btn--inverse btn--large btn--pill" href="http://sanddroid.xjtu.edu.cn/report?apk_md5=6B22FA1898E2A608E6BA24B16E01F2FC" target="_blank" rel="nofollow noopener" data-url="http://sanddroid.xjtu.edu.cn/report?apk_md5=6B22FA1898E2A608E6BA24B16E01F2FC">http://sanddroid.xjtu.edu.cn/rep ... 608E6BA24B16E01F2FC</a>
+<p>下表為相關總結：</p>
+<p>[table id=11 /]</p>
+<p>就私隱關注而言，上表列出的只是問題的冰山一角，（有的如 Alipay 會直接取得 /proc/cpuinfo 等，HKCERT 報告沒有無提及便從略），上表只是希望說明，單就 HKCERT 報告所謂深度分析中有提及的「高風險行為」，很多 Apps 因用戶追蹤等原因，都會「觸犯」。而在 VirusTotal 結果中，像上面 Alipay 及 HKCERT 報告所述「蘋果」App 的情況，即是只有極少數防毒商的掃瞄結果為 positive（尤其是較著名的 anti-virus 廠商都未有顯示問題的情況），正常應理解為 false positive，因為有可能個別廠商用作 scan 的 signature 與 Apps 有巧合相同的code。</p>
+<img class="aligncenter size-full wp-image-1103" src="/assets/uploads/2019/05/CaptureAl.png" alt="" width="1100" height="498" />
+<p style="text-align: center;">同被 HKCERT 檢查的 Alipay，在 VirusTotal 測試有 2 家防毒軟件 scan 到有 Trojan，但 HKCERT 報告沒有就該 App 發警告</p>
+因此，即使以 HKCERT 報告中這樣粗疏的手法，去檢視報告聲稱有檢查的數十隻 App，亦很難想像只會得出僅有蘋果動新聞及其他少數 App，須特別發出預警報告的結論。<br>
+當然，或許有在所謂「深度分析」中沒有提及，不為人知的原因及準則，導致 CNCERT 及 HKCERT，只挑出上述的 App 發出預警，但果真如是，HKCERT 作為100%政府資助，具官方性質及有專業權威性的機構，在此事上發表一些會嚴重影響品牌聲譽的報告，但背後不但錯漏百出，求其了事，更欠缺透明及未能讓<span class="st">公眾看到秉行公正</span>，實在很有問題。<br>
+<p>公眾有理由提出，這項所謂分析工作有否拿公帑給 CNCERT 進行，還是義務性質？若是單純做毫無真正分析的反編繹源碼 keyword search 及將 App 交到 VirusTotal 檢查（任何人都可免費提交），機械式得出無意義及具誤導性的預警，找 CNCERT 以至 HKCERT 自己做項工作目的及意義在哪裏？</p>
+<p>話說回頭，如果政府就提高電話攔截 App 質素的實際措施，就是進行這樣質素，以及看不到公正性的驗證，作者為免浪費公帑，不參與也罷。而若公眾按這種驗證的結果來選擇App，作者亦只有一句：自求多福。</p>
+下一篇【<a href="/2019/05/07/HKCERT列-蘋果動新聞-為高風險(二)之三重巧合.html">HKCERT 列「蘋果動新聞」為高風險 (二) 之 三重巧合 ?</a>】，在發表時機上，看看今次報告巧合之處。<br>
+<p>&nbsp;</p>
+註1: 本文整理及補充了作者於 HKPEC 相關 Post 的討論 : <a href="https://www.hkepc.com/forum/viewthread.php?fid=110&amp;tid=2497432&amp;extra=&amp;page=1">https://www.hkepc.com/forum/viewthread.php?fid=110&amp;tid=2497432&amp;extra=&amp;page=1</a>
+註2: <a class="btn btn--inverse btn--large btn--pill" href="https://www.android-apk.com/2019/05/%E9%A6%99%E6%B8%AF%E9%9B%BB%E8%85%A6%E4%BF%9D%E5%AE%89%E4%BA%8B%E6%95%85%E5%8D%94%E8%AA%BF%E4%B8%AD%E5%BF%83%E7%99%BC%E8%A1%A8-%E6%87%89%E7%94%A8%E7%A8%8B%E5%BC%8F%E4%BF%9D%E5%AE%89%E9%A2%A8/">Android-apk.com</a>亦有一份相關分析文章，更詳細解釋有關謬誤。HKCERT 報告的錯誤對懂 Android 及 Java 的讀者，實在太明顯。<br>
+<h2>後記</h2>
+報載「生產力促進局」對蘋果的反駁，有如下回應：「<span id="postorig_498810525">檢測應用程式機制自2013年沿用至今，報告一直<span style="text-decoration: underline;">基於披露事實原則</span>，同時會列出由國際惡意軟件分析機構 VirusTotal 上不同的防惡意程式引擎所進行的偵測結果和資料，供流動應用程式用戶作額外參考。協調中心並<span style="text-decoration: underline;">不會對個別結果作出分析或評論</span>」。</span>
+<span id="postorig_498810525">作者要指出，(1) 撇除如上文指出，報告連事實都攪錯的問題，報告當中提及「不良行為」，相關 App 是否已被下架等，強烈暗示有關App有問題，英文版更直接指明，有關 App <span style="text-decoration: underline;">有</span> "malicious activities"。而報告亦沒有全面披露其他 App 的檢查結果作比對，只是一面倒地披露相關App的「風險」，更無闢明所謂「風險」的意義（這方面可以比對消委會的產品報告），因此絕對難以理解這是一份僅屬陳列事實性質，可供公眾自行作持平結論的報告 。(2) 報告由 HKCERT 發出，內文指明「我們(HKCERT)與CNCERT<strong><span style="text-decoration: underline;">合作</span></strong>，對從 Play 商店下載的應用程式<strong><span style="text-decoration: underline;">進行惡意及可疑行為檢測</span></strong>」，即檢測名義上是合作進行的，但一有問題立刻極速割蓆，對用自已名義發出，放在自已網頁的東西，甚至可能是動用公帑資助及有責任監察的分析，被指出有問題後，不但沒有試圖澄清及檢討，更擺出事不關己，一點責任也沒有的態度！</span>
+<p>看來這事所披露的，已非個別基層檢驗人員粗疏塞責的問題，而是公眾應如何看待，以後 HKCERT 以至生產力促進局發出的東西，公信力有多少，以及所涉公帑是否用得其所的問題。</p>
+<img class="aligncenter size-full wp-image-1102" src="/assets/uploads/2019/05/CaptureM.png" alt="" width="1008" height="489" />
+<p style="text-align: center;">截圖為英文版的「深入分析」，直指相關App有惡意活動</p>
+<h2>參考</h2>
+[1] HKCERT 報告 <a href="https://web.archive.org/web/20190505022056/https://www.hkcert.org/my_url/zh/blog/19043001">https://www.hkcert.org/my_url/zh/blog/19043001</a>，註: 原報告已移除，鏈結至 Internet Archive 存檔。<br>
+[2] 見立法會資訊科技及廣播事務委員會 2018年4月9日會議，會議紀要19段 <a href="https://www.legco.gov.hk/yr17-18/chinese/panels/itb/minutes/itb20180409.pdf">https://www.legco.gov.hk/yr17-18/chinese/panels/itb/minutes/itb20180409.pdf </a>
+[3] StackTraceElement 文件見 <a href="https://docs.oracle.com/javase/7/docs/api/java/lang/StackTraceElement.html">https://docs.oracle.com/javase/7/docs/api/java/lang/StackTraceElement.html</a>
+[4] TelephonyManager.getLine1Number() 文件見 <a href="https://developer.android.com/reference/android/telephony/TelephonyManager.html#getLine1Number()">https://developer.android.com/reference/android/telephony/TelephonyManager.html#getLine1Number()</a>
+[5] Android SEND 機制見 <a href="https://developer.android.com/training/sharing/send">https://developer.android.com/training/sharing/send</a>
+[6] Facebook MessengerUtils api 見 <a href="https://developers.facebook.com/docs/reference/androidsdk/current/facebook/com/facebook/messenger/messengerutils.html/">https://developers.facebook.com/docs/reference/androidsdk/current/facebook/com/facebook/messenger/messengerutils.html/</a>
+[7] ShareCompat 文件見 <a href="https://developer.android.com/reference/android/support/v4/app/ShareCompat">https://developer.android.com/reference/android/support/v4/app/ShareCompat</a>

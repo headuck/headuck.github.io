@@ -1,0 +1,20 @@
+---
+layout: post
+title: "小鴨幹線開發版0.1.4"
+date: 2015-12-15 13:08:53
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 83
+---
+<p>開發版0.1.4新增選擇來電時彈出視窗位置的設定，以免在一些系統中蓋過了接聽的介面。</p>
+Android 5+ 中，彈出視窗的優先度是低於系統接聽的Heads-up Notification，所以不要把視窗拉至頂部，否則會被蓋過。<br>
+其他更新：<br>
+<ul>
+	<li>之前版本預設了廣告來電攔截後自動提交，以監察名單上的電話，不過因為HKJunkcall應已有足夠供應，太多只加重Server負荷，新版已預設為關。</li>
+	<li>因應回報，處理來電號碼前先除去多餘字元，看看可否解決一些機種辨別匿名來電的問題。</li>
+	<li>Samsung新機種已不再將SMS log及Call log混在一起，在Android5以上回報時不再為Samsung作特別處理，以試圖解決一些機種call log為空白問題。</li>
+	<li>自動下載或回報失敗，程式會重新排期重試的，不再出失敗的notification打擾用戶。</li>
+	<li>Android 2的設定除去Android 5-6的選項。</li>
+</ul>

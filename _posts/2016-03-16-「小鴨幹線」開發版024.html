@@ -1,0 +1,20 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.4"
+date: 2016-03-16 02:42:14
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 275
+---
+此版本：<br>
+<ul>
+	<li>修正了Android 6 攔截後取消靜音的問題（感謝Google play Brian Chu回報），該問題是因為Android 6 API中，由 AudioManager.setStreamMute 轉至AudioManager.adjustStreamVolume的更改，背後的運作改變，以致須另行保存原有狀態才可正常回復。</li>
+	<li>修正了部份機種匯入黑白名單的問題。</li>
+	<li>因應建議，加入了在彈出通知中顯示來電SIM卡的選項，（可於攔截動作＞通知設定中，啟用顯示SIM號碼）。SIM卡顯示亦會盡量按系統設定的顏色（特別是Android5.1及以後）。由於Emulator沒有雙卡模擬因此暫屬試驗性質。</li>
+	<li>更新了有效IDD號碼資料（包括新的澳門手機號碼）。</li>
+</ul>
+此版本亦使用了Google最新的Support Library版本（23.2.1），主要是在舊機種支援向量格式的圖像（Vector Drawable），免除為不同resolution製作不同的png檔，較為省記憶，其中主頁小鴨已轉用了vector，其他圖像亦會逐步轉用。<br>
+另一方面新版library在Android 2.X中的部份畫面出現顯示問題，AppBar捲動後畫面沒有更新（好像之前沒有人在Stackoverflow / google 回報，所以<a href="https://code.google.com/p/android/issues/detail?id=204416">報告左</a>），故暫時將新版App限於API 11或以上，直至library的問題解決。API 8-10(Android 2.X)可繼續使用0.2.3版。<br>
+（3月21日 更新：已找到臨時方法，override <code>AppBarLayout.Behavior</code>以避開問題，下版（0.2.5版）會恢復對API 8+支援）<br>

@@ -1,0 +1,26 @@
+---
+layout: post
+title: "你個嘢壞咗啊！來電攔截App 突然失效之謎 (上)"
+date: 2018-06-18 19:02:05
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 764
+---
+<p>之前講到，Google表示在Android P起，會漸漸封鎖隱藏功能(Hidden API)，當中攔截來電App常用的掛線功能，雖在 Android P 的預覽版中只納入淺灰名單(即預計Android P仍然可用)，但再下一版亦可能難逃被封。似乎在兩、三年後，只有電話撥號App才可以繼續掛線攔截。但第三方撥號App，在配合手機功能及原廠界面方面必定大打節扣。</p>
+<p>踏入5月，原以為兩、三年後才出現的情況，突然到來，有用戶回報，廣告來電時雖然偵測到，但掛線功能失效，其他功能正常。顯然，這次不是一般的背景被殺問題。追查之下，原來問題是源自官方Android於5月發布的一項「保安更新」！</p>
+<!--more-->
+原來，這個廣為攔截App使用的掛線功能 (<code>TelephonyManager#endCall()</code>)，被一間寫App公司 Introne Apps 向 Google「舉報」[註1]，由於與後來加入的源碼處理不一致，這項原先存在的功能竟被當成保安漏洞，還附上漏洞編號「 CVE-2017-13322」。Google 人員在2月，修改了 Android 系統以「堵塞」該「漏洞」。<br>
+<blockquote>該項修改連結:
+<a href="https://android.googlesource.com/platform/packages/services/Telephony/+/25b3a8b0af2e479b5eaca40ec5c82a1c7971580a">Enhanced permission checks for TelephonyManager#endCall() API.</a>
+<p>修改註釋:</p>
+The existing permission checks require CALL permission in order to end an ongoing call or reject an incoming call. The Telecom equivalent of this API requires MODIFY_PHONE_STATE. Since this API IS in fact a system API, modifying the permission requirements to require the same MODIFY_PHONE_STATE permission. [註2]</blockquote>
+此改動在4月中被採納到 Android 源碼，再被納入了對Android 6及以上適用的 Security Patch，在2018年5月5日的保安更新中發出。<br>
+<blockquote>5月5日保安更新詳情:
+<a href="https://source.android.com/security/bulletin/pixel/2018-05-01">https://source.android.com/security/bulletin/pixel/2018-05-01</a></blockquote>
+換句話說，原本預計在數年後才在Android Q發生的問題，提前在今天出現，並透過Security Update，在短期內影響Android 6以上(即大部份)用戶。<br>
+<p>隨着該保安更新，漸漸被各手機商推送，大量攔截App用戶發現，在Android更新後，用開的App已不能掛線，最多只能靜音，而視乎App及設定，廣告及詐騙來電來電時會一直震動，造成滋擾。</p>
+<p>獨立的攔截App是否就此被趕上絕路？欲知後事如何，且看下回分解。</p>
+[1] 來源: Google: <a href="https://source.android.com/security/overview/acknowledgements">https://source.android.com/security/overview/acknowledgements</a>
+[2] 此處提及的 <code>Telecom</code> 是指 <code>TelecomManager</code> 下，功能相似的源碼。Telecom是較新的模組，能處理所有種類的來電 (如 VoIP)，現行 <code>TelephonyManager</code> 則處理傳統的流動網絡。由於 <code>MODIFY_PHONE_STATE</code> 權限，只有系統App才可獲取，上述改動亦等同直接封鎖了該功能。<br>

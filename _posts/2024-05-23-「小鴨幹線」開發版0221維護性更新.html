@@ -1,0 +1,24 @@
+---
+layout: post
+title: "「小鴨幹線」開發版 0.2.21 – 維護性更新"
+date: 2024-05-23 11:23:50
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1779
+---
+<p>此版本相對 2023 年 7 月的 0.2.20 版（僅於此網頁下載），作出了下列改動：</p>
+<p>- 修復 Android 15 beta 攔截
+- 修復讀取通話紀錄問題<br>
+- 更新 IDD 資料至 2024 年 5 月</p>
+下載：<a href="/2016/02/13/小鴨幹線0226-APK下載.html">/2016/02/13/小鴨幹線0226-APK下載.html</a>
+以下為修復問題的技術性詳情。<br>
+<h3>Android 15 beta 修復</h3>
+由於 Android 15 beta 的內部改動，小鴨在偵測可用的 API 時會發生錯誤，以至未能啟動攔截，稍作更改後已可恢復運作。<br>
+Google 陸續收緊 Android 內部 API 的使用，在 Android 14 或之前，若程式的 target 是 Android 9 (API 28) 或以下，仍可使用 <code>TelephonyManager.getITelephony()</code> 這個隱藏 API 以取得控制來電的內部接口，<br>
+<p>而小鴨的 Target API 正是 28 (Android 9)。</p>
+不過 Android 15 beta 作出了更新，將該 API 的標簽由 <code>max-target-p</code> 轉為 <code>blocked</code>，無論 Target API 為何，嘗試使用該 API 都會失敗，導致偵測期間出現未預見的問題，攔截服務沒有啟動。<br>
+該內部 API 在舊版本 Android 為必須，但在近年的 Android 版本已有代替方案，在稍作更改後，會轉用其他 API，在 Android 15 beta 仍可正常攔截。<br>
+<h3>修復讀取通話紀錄功能</h3>
+由於 Android <code>ContentResolver</code> <code>query()</code> 的更新，須改用新的方式提供 <code>LIMIT</code> / <code>OFFSET</code> 等參數，讀取通話紀錄。更新後會修復最近 Android 版本的一些問題，包括自動刪除通話紀錄，小鴨 icon 的回報 shortcut 未能取得最近一次電話紀錄等問題。<br>

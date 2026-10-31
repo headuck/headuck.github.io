@@ -1,0 +1,45 @@
+---
+layout: post
+title: "「小鴨幹線」開發版 0.2.22 – 更新目標 Android 系統版本"
+date: 2024-06-11 20:33:14
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1797
+---
+<p>本版（0.2.22，僅於此網頁下載）主要是更新目標 Android 版本，從 Android 9 (SDK 28) 跳升至 Android 14 (SDK 34)。</p>
+下載：<a href="/2016/02/13/小鴨幹線0226-APK下載.html">https://blog.headuck.com/%e6%b8%ac%e8%a9%a6%e7%89%88/</a>
+以下為主要改動：<br>
+<!--more-->
+<img class="aligncenter size-full wp-image-1803" src="/assets/uploads/2024/06/Screenshot_2024-06-11_20-28-27.png" alt="" width="285" height="453" />
+<h2>適應系統更新</h2>
+更新各項新 Android 版本的功能或要求：<br>
+<ul>
+ 	<li>（Android 10 或以上）支援由用戶設定為預設來電顯示程式，以作攔截，由於是由系統直接啟動而不是靠背景工作啟動，運作上會較可靠，受中止背景運作的影響較少；用戶仍可選擇不將小鴨預設為來電顯示程式（和 iOS 不同， Android 系統只能指定一個程式），小鴨仍會以原有方式運作。
+（順帶一提，該預設的全名為「來電顯示與垃圾郵件應用程式」，這是由於原文 Caller ID &amp; spam App 中的 spam 被譯作「垃圾郵件」。按前文後理這明顯是指「垃圾電話」，放心小鴨是不會讀取你的電郵的）</li>
+ 	<li>因應新的權限及限制，加入讓用戶設定顯示通知權限，及停止系統自動將不使用程式休眠的設定；</li>
+ 	<li>支援新的夜間（黑暗）模式機制，及語言選擇機制，在 Android 13 以上可於系統設定中選擇個別 App 的語言；</li>
+ 	<li>在較新的 Android 版本須透過 Storage Access Framework 讀取檔案，不能直接存取手機檔案，因此匯入已儲存名單時，會使用新的系統界面選取檔案；</li>
+ 	<li>其他技術性更新。</li>
+</ul>
+隨目標版本更新，Android 系統的限制會更嚴格，可能出現新的運作問題，（例如自動下載會否啟動等）。另一方面，若將「小鴨幹線」設為預設來電顯示程式，運作上大致不會受背景限制影響。敬請留意及回報相關問題。<br>
+<h2>廣告來電新類別</h2>
+因應 HKJunkCall 將廣告來電分類細分，修訂廣告電話類別的設定，新增如銀行、地產類別（之前雖有顯示但可能不能選擇）。如用戶之前曾設定僅攔截部份類別，請再檢視設定。<br>
+<h3>增加權限設定</h3>
+大部份未能攔截的情況是因為權限設定，特別是如之前文章提及，三星會停止沒有加入電池優化例外名單的程式。此版加入電池優化例外名單的直接設定，並將原有的權限設定，連同新增設定，放到新的權限設定類別中，加入解釋，減少問題。<br>
+注意各廠商有各自的背景運作設定，按照相關設置，不能保證能夠在各機種維持背景運作。<br>
+<h3>界面細節更新</h3>
+更新了部份設計。<br>
+<h3>運作變化</h3>
+<ul>
+ 	<li>若將小鴨設定為預設來電顯示程式，通話中收到應攔截的來電，都會被攔截（原本僅會顯示訊息但沒有動作）；但如攔截設定為接通再掛線，會改為直接掛線。</li>
+ 	<li>如果用戶設定了攔截在電話簿內存在的電話，但不給予小鴨電話簿權限，基於 Android 系統設計，預設來電顯示程式是不會處理該來電的，這時候仍會由背景工作處理攔截。</li>
+ 	<li>Android 13 以上 Android 版本，隨時鐘 App 外，不能準確控制觸發背景工作（如下載名單）的時間。因此用戶設定的更新檢查時間，實行上可能有較大誤差。</li>
+</ul>
+由於涉及更新較多，可能出現運作問題，短期內或再有更新修復，敬請留意。<br>
+<h3>程式有害?</h3>
+（後記） Google Play Protect 在 6 月 11 日上述更新公開後數小時內，自動將此版本列為有害（與上一版 Google Play 版本相似，不同之處是現在 Google Play Protect 預設會掃描非 Google Play 安裝的程式，而且目前小鴨亦不在 Google Play 上發放）。經提出上訴後在 6 月 12 日似乎已經不再列為有害。<img class="aligncenter size-full wp-image-1809" src="/assets/uploads/2024/06/Screenshot_2024-06-12_02-34-23.png" alt="" width="809" height="201" />
+參考 VirusTotal 對此版本掃描結果，一如以往沒有出現問題（可嘗試 Upload 此 APK 驗證是同一 APK）： <a href="https://www.virustotal.com/gui/file/9c78352beb9c83a271c45ac80d31a339bcadd9ef135ae24f6bf255593ec53471/detection">https://www.virustotal.com/gui/file/9c78352beb9c83a271c45ac80d31a339bcadd9ef135ae24f6bf255593ec53471/detection</a>
+Google Play Protect 在今年較早前亦將一隻 F-Droid 內的開源攔截程式（Yet Another Call Blocker）列為有害：<a href="https://gitlab.com/xynngh/YetAnotherCallBlocker/-/issues/86">https://gitlab.com/xynngh/YetAnotherCallBlocker/-/issues/86</a>
+<p>而該程式數年來沒有更新，明顯是門檻降低。上述有關 Yet Another Call Blocker 的討論就有人指出， Google 過去已將大量 Google Play 以外，包括開源的程式，列為「有害」，亦有人認為可能涉及反競爭而所出投訴（雖然亦知作用有限）。</p>

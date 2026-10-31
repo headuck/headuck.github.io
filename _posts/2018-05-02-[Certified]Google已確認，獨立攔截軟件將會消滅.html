@@ -1,0 +1,20 @@
+---
+layout: post
+title: "[Certified] Google 已確認，獨立攔截軟件將會消滅"
+date: 2018-05-02 03:17:39
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 730
+---
+前文<a href="/2018/01/22/AndroidP電話攔截軟件末日.html">[1]</a><a href="/2018/03/09/小鴨@AndroidPPreview1測試.html">[2]</a>提及，現時獨立攔截軟件能夠掛線，有賴 Android 系統的一個隱藏API，而 Google 將逐步收緊以至禁止軟件使用這類API。即使 Android P 暫未封禁該隱藏API，再下個版本亦很有可能正式禁制。<br>
+獨立攔截軟件的唯一出路，是Google將該隱藏API，轉為正式開放的API，供獲用戶授予攔截權限的軟件使用，可惜，近日Google 在 Android P Preview 的 Issue Tracker 中，已正式否決了<a href="https://issuetracker.google.com/issues/78000409">相關要求</a>。<br>
+<!--more-->
+Google 在回應中，透露了未來的計劃(似乎是Android P以後的事)<br>
+<blockquote>We have no plans to expose that individual call control APIs via TelecomManager or TelephonyManager at this time.
+In the future, we plan to expose a more comprehensive call control API based on the existing InCallService API. This would allow the user to select a single app which would also be bound to for the purpose of controlling calls on their device.</blockquote>
+現時 InCallService API 僅限於用戶預設的<em>一個</em>電話應用使用，提供通話／視像通話時的用戶介面，一般由系統廠商提供，因應個別電話機款支援的功能以至介面設計而度身訂造，比攔截軟件複雜多倍。而上述回覆中亦提及"a single app ... for controlling calls"，即僅能由<strong>一個</strong>電話使用該 API 的限制不會改變，因此，電話應用以外的軟件將無法提供掛線功能(情況和 Android 4.4 以後攔截SMS一樣)。<br>
+<p>因此，Google 的說法，確認 Android 下的獨立攔截軟件，不久將來將會消滅，用戶要攔截電話，只可選擇廠商／電話供應商提供的服務，或透過繁複的設定，使用一個未能發揮手機功能及可能與系統介面格格不入的電話撥號兼攔截軟件。</p>
+<p>又或者，轉投這方面將比 Android 還開放的 iOS。</p>
+<span style="color: #999999;">註：其實已有人發現了<a href="http://www.infoq.com/cn/news/2018/04/Android-P-API">繞過Android P對隱藏API限制的方法（簡體網頁）</a>，不過便要冒被Google偵測到會被下架的風險⋯⋯</span>

@@ -1,0 +1,27 @@
+# Built site (GitHub Pages builds this)
+_site/
+
+# Local Jekyll cache
+.jekyll-cache/
+*/.jekyll-cache/
+
+# Local dev artifacts
+$HOME/
+rebuild.sh
+
+# Documentation and scripts used only during migration/link-fixing
+.docs/
+scripts/
+README_LINK_FIX.md
+
+# WordPress plugin leftovers (excluded from build, should not be committed)
+assets/uploads/bug-library/
+assets/uploads/redux/
+assets/uploads/simple-file-list/
+assets/uploads/wp-statistics/
+assets/uploads/cache.php
+
+# macOS / editor noise
+.DS_Store
+*.swp
+*~

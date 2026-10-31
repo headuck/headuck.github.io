@@ -1,0 +1,21 @@
+main:
+  - title: "安裝「小鴨幹線」"
+    children:
+      - title: "下載 APK"
+        url: /2016/02/13/小鴨幹線0226-APK下載.html
+      - title: "F-Droid 連結"
+        url: /2024/06/14/小鴨幹線-專屬F-droid軟體庫啟用.html
+      - title: "Uptodown 連結"
+        url: https://headuck-call-blocker.en.uptodown.com/
+  - title: "說明"
+    children:
+      - title: "版本 0.2 說明"
+        url: /2016/02/02/小鴨幹線版本02說明.html
+      - title: "私隱和安全"
+        url: /2017/03/15/小鴨幹線-私隱和安全(UserPrivacyandSecurity).html
+      - title: "非標準 ROM／聲稱省電軟件使用者必讀"
+        url: /2016/08/29/小鴨幹線-非標準ROM-聲稱省電軟件使用者必讀.html
+      - title: "常見問題匯編"
+        url: /2016/08/29/小鴨幹線-常見問題匯編.html
+      - title: "Roadmap"
+        url: /2015/12/25/小鴨幹線開發版developmentroadmap.html

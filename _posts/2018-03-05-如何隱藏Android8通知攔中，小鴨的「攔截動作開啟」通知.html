@@ -1,0 +1,62 @@
+---
+layout: post
+title: "如何隱藏 Android 8 通知攔中，小鴨的「攔截動作開啟」通知"
+date: 2018-03-05 00:23:47
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 706
+---
+<h2>攔截動作通知的由來</h2>
+Android 8 其中一項新增省電「功能」，是對 App 更嚴格的背景執行限制，Google規定，所有符合Android 8要求 （正確地說是 target API 26 或以上）的App ，若要保持在背景運作，<span style="color: #ff0000;">必須</span>長期在通知欄顯示通知／ icon。該通知是屬於on-going類別，不能掃走。而 App 若不顯示通知，Android會在短時間內終止該背景運作[1]。<br>
+<!--more-->
+
+Google 的原意，<del>是透過滋擾用戶，逼使</del> 希望App 盡量減少在背景運作，以達至省電效果。為保持現有App 的兼容性，現時 App 可以暫時不符合此項要求，但無論如果必須在今年內升級至符合要求[2]。<br>
+
+攔截 App 因要保持在背景運作，因此無可避免要按規定顯示通知。「小鴨幹線」由 0.2.10 版起，改寫了通知部份以利用 Android 8 的新功能，因此亦按規定，在開啟攔截時在通知欄顯示通知  -<br>
+
+<img class="size-full wp-image-712 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520174405.png" alt="" width="360" height="640" />
+
+或許「小鴨幹線」0.2.10/11 是很多用戶所安裝的首隻、按 Android 8 有關規定而製作的背景App，發佈新版後，隨即收到了加入移除該通知選項的要求。<br>
+<h2>移除方法</h2>
+<h3>(1) 隱藏小鴨的背景通知</h3>
+首先，正如上述解釋，App要保持在背景運作，便無法自行移除通知，(否則 Google <del>滋擾用戶</del>的「苦心」便無法落實) 。不過，用戶仍有方法自行隱藏通知。<br>
+
+第一步，用戶可在拉下通知攔後，長按通知，Android 便會出現小鴨的「攔截狀態」通知頻道的選項 -<br>
+
+<img class="size-medium wp-image-711 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520174420.png" alt="" width="360" height="640" />
+
+此時，用戶可按右面的開關，關上選項，如下圖 -<br>
+
+<img class="size-medium wp-image-710 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520174427.png" alt="" width="360" height="640" />
+
+於是你再不會收到這類通知了，大功告成⋯⋯無咁早， Google 哪會這樣輕易讓你不受滋擾呢，隱藏了小鴨的通知，系統便會發出另一通知，告知用戶小鴨在背景運作(以下為Android 8.1的通知，和Android 8.0的字眼稍為不同) 。注意這已經是「Android系統」而不是小鴨App的通知了。<br>
+
+<img class="size-medium wp-image-709 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520174442.png" alt="" width="360" height="640" />
+
+(注意，上述系統通知指小鴨在耗用電量，實屬誤導，其實只是指小鴨背景服務開啟，但在沒有來電或其他事件觸發時並不會耗電。)<br>
+
+以下步驟，在 Android 8.0 及 Android 8.1 上完全不同，請按需要參看有關部份。<br>
+<h3>(2) Android 8.0: 「延後」系統的背景通知</h3>
+在<strong>Android 8.0</strong> 之下，這個系統的背景通知無法直接隱藏，但仍有方法不顯示，就是利用 Android 的延後顯示通知功能(把通知向右掃，按時鐘icon)，再加入很長的暫緩時間。但每當通知改變狀態後，便要重新延後，相當麻煩。<br>
+
+於是有人想到寫 App，利用 Android 的 Notification Listener 權限，自動為用戶延後有關的通知，有關 App 介紹，可參看以下 xda 文章 :<br>
+
+<a href="https://www.xda-developers.com/hide-app-running-background-notification-android-oreo/">How to Hide the “App is Running in the Background” Persistent Notification on Android Oreo</a>
+
+(其實小鴨亦有利用該權限，原理亦很簡單，不過為免有朝一日，Google 視該手法為規避系統而將App下架，所以都是不在App內實行了。)<br>
+<h3>(3) Android 8.1: 隱藏系統的背景通知</h3>
+可能是收到 Android 8.0 用戶的強烈意見，Google 在 <strong>Android 8.1</strong> 留有生路，用戶可再長按系統的通知，<br>
+
+<img class="size-medium wp-image-708 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520174454.png" alt="" width="360" height="640" />
+
+然後以同一方法，關上這個「正在耗用電量程式」的系統頻道，那麼小鴨和其他背景工作的背景運作系統通知，便不會再出現。<br>
+
+<img class="size-full wp-image-707 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520174458.png" alt="" width="360" height="640" />
+
+若日後想回復通知，則須到系統的「應用程式通知」設定內，選擇「查看全部程式」，按右上角三點再選「顯示系統」，找出及選擇「Android系統」的項目，點擊「應用程式通知」，將「正在耗用電量的應用程式」一項開啟便可，相當簡易(！)。<br>
+<h3>註釋</h3>
+[1] 見 <a href="https://developer.android.com/about/versions/oreo/background.html">https://developer.android.com/about/versions/oreo/background.html</a>
+
+[2] 見 <a href="https://android-developers.googleblog.com/2017/12/improving-app-security-and-performance.html">https://android-developers.googleblog.com/2017/12/improving-app-security-and-performance.html</a>

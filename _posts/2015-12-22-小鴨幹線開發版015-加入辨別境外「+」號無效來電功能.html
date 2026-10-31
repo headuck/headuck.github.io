@@ -1,0 +1,37 @@
+---
+layout: post
+title: "小鴨幹線開發版0.1.5 - 加入辨別境外「+」號無效來電功能"
+date: 2015-12-22 14:32:07
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 95
+---
+<h2>「<strong>小鴨幹線</strong>」加入辨別境外「+」號無效來電功能</h2>
+<h3><strong>概要</strong></h3>
+開發版0.1.5加入了程式庫，<strong>內有辨別全球有效IDD號碼的最新<span class="st">格式</span>資料</strong>，在<strong>香港</strong>網絡接到「+」號碼時，會核對<span class="st">格式</span>資料，看看是否有效IDD號碼，以及（若是有效號碼的話）來源國家或地區及電話種類。程式預設會彈出顯示，讓接聽者提高警覺（可於設定 &gt; 攔截動作更改）。<br>
+<!--more-->
+
+另外，攔截設定亦加入新項目，可在<strong>香港</strong>網絡接到「+」號而被辨為無效IDD號碼時，攔截這些電話（預設為關，可於設定 &gt; 攔截條件更改）。<br>
+
+0.1.5版亦修改了設定功能背後的運作，以減少設定功能可能出錯的情況。<br>
+
+<a href="https://play.google.com/store/apps/details?id=com.headuck.headuckblocker.dev">Play Store 下載</a>
+
+[caption id="attachment_96" align="aligncenter" width="576"]<a href="/assets/uploads/2015/12/device-2015-12-21-134302.png"><img class="wp-image-96 size-large" src="/assets/uploads/2015/12/device-2015-12-21-134302-576x1024.png" alt="自動攔截無效電話，彈出警告視窗" width="576" height="1024" /></a> 自動攔截無效電話，彈出警告視窗[/caption]<br>
+<h4><strong>注意</strong>:</h4>
+<ol>
+	<li>在香港以外，上述功能會自動關閉。</li>
+	<li>有效IDD號碼，<strong>不代表不是假號碼</strong>，因為騙徒亦可以輸入某些國家或地方的有效IDD號碼。在此情況，顯示來源地的功能，亦有助分辨。</li>
+	<li>若某國家或地區的電話編排有改動，例如增加了區段，這些新電話可能<strong>被誤認無效</strong>。（若有此情況，可把該電話加入聯絡人及啟用不攔截聯絡人，並回報該電話）。</li>
+	<li>由於香港理論上不應接到境外打入的香港電話，所以在<strong>香港網絡</strong>接到+852字頭的電話會視為無效，亦不視作電話簿上的聯絡人（否則會誤作配對） 。若有需要，可關掉此項功能（設定 &gt; 攔截動作 &gt; 「+852」來電作無效）。</li>
+</ol>
+<h3><strong>背景</strong></h3>
+為防止境外來電假扮本地電話，由境外撥至香港而有來電顯示的電話，較早前已加上前綴的「+」號，以便接聽者提高警覺，但有「+」號的假電話（多為假冒順風同DXL的錄音，引誘接聽者與假「公安」通話）仍不斷出現，這些電話的來電號碼應是隨騙徒輸入的，因此以黑名單方式難以攔截。<br>
+
+騙徒多是假冒香港電話而輸入8位來電號碼，這些號碼很多根本不可能是IDD號碼，因為IDD號碼必然是（國家號碼） +（<span class="st">地區</span>號碼），而每個國家的<span class="st">地區號碼也有一定格式及長度。</span>
+
+使用程式庫可較有效辨別此等號碼，而不影響正常的IDD來電。事實上較新的Android系統內亦設有該程式庫，所以有來電時Android UI也會辨別IDD來源國家地區，但內置程式庫為相應Android版本推出時的資料，或會較舊，Android UI亦不會特別標示無效號碼。而Android 5開始的版本使用Heads up notification時也不會顯示來源國家地區。<br>
+
+[caption id="attachment_101" align="aligncenter" width="545"]<a href="/assets/uploads/2015/12/Screenshot_2015-12-23_09-53-03.png"><img class="wp-image-101 size-full" src="/assets/uploads/2015/12/Screenshot_2015-12-23_09-53-03.png" alt="Screenshot_2015-12-23_09-53-03" width="545" height="833" /></a> 境外假來電攻陷香港(Cap from Junkcall.org)[/caption]<br>

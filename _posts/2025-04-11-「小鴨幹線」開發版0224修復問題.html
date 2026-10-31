@@ -1,0 +1,33 @@
+---
+layout: post
+title: "「小鴨幹線」開發版 0.2.24 – 修復問題"
+date: 2025-04-11 02:26:36
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1892
+---
+<p>感謝用戶回報 HKJunkCall 連接問題。由於小鴨作者外遊，未能快速回應，不便之處，敬請見諒。</p>
+此版本修復以下問題：<br>
+<ol>
+ 	<li>連接 HKJunkCall 失敗：HKJunkCall 更新了伺服網站的認證，由於「小鴨幹線」自行採用了憑證綁定的措施，須更新應用程式，方能恢復連接。</li>
+ 	<li>在未有開啟足夠權限執行背景工作的手機，啟動電話時自動開啟攔截，或下載更新時，或會因 Android 限制失效。</li>
+</ol>
+所作的修復性修訂：<br>
+<ol type="1">
+ 	<li>更新了 HKJunkCall 伺服網站的認證。</li>
+ 	<li>更新啟動背景工作的方式：
+<ul>
+ 	<li>在啟動電話後直接開啟攔截，取消稍作延遲的設定，以避開相關限制。</li>
+ 	<li>在 Android O 以後，使用 Job Scheduler 代替 Foreground Service。</li>
+</ul>
+</li>
+</ol>
+其他更新：<br>
+<ol>
+ 	<li>更新了 IDD 資料。</li>
+</ol>
+16/4/2025：<strong>此版本自動更新有問題，須手動更新，將盡快推出新版本解決。</strong>
+下載頁面：<a href="/2016/02/13/小鴨幹線0226-APK下載.html">/2016/02/13/小鴨幹線0226-APK下載.html</a>
+「小鴨幹線」F-Droid 軟體庫： <a href="https://fdroid.link/#https://repo.headuck.com/fdroid/repo?fingerprint=52F43634B1A568447094597567564AFF677292B670B7CC703CB73E2694C37CC7">鏈結</a>（用法參閱<a href="/2024/06/14/小鴨幹線-專屬F-droid軟體庫啟用.html">此文</a>）<br>

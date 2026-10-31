@@ -1,0 +1,116 @@
+---
+layout: post
+title: "Java InputStream glitches on Android"
+date: 2016-02-13 22:41:42
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 226
+---
+<a href="/assets/uploads/2016/02/update_failed.png"><img class="alignnone size-full wp-image-245" src="/assets/uploads/2016/02/update_failed.png" alt="update_failed" width="640" height="388" /></a>On 12 February 2016, beginning from around 1440, there were reports that the Headuck Call Blocker App (hereafter "the App") failed to download the updated database from HKJunkCall.com (released at around 1340), while other apps could do so normally.  Having just upgraded the App to use https (TLS) instead of http for downloading, and with some security features to prevent communication over wiretapped channels, the new code came into mind as a primary suspect for the failure.
+<!--more-->
+
+It turned out that the problem was instead in the seemingly benign piping of simple byte stream between different standard libraries in Android.<br>
+<h3>The tale of two libraries</h3>
+Some basics - the <a href="https://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html">InputStream</a> class of Java is a base class representing an input stream of bytes.  A number of libraries in Java supports / builds around the <code>InputStream</code> class, making it a common "protocol" for chaining byte processing in Java.<br>
+
+The App downloads a frequently updated list of junk call numbers, provided by HKJunkCall.com in a compressed (zipped) XML format.  To get the contents, it needs to decompress (unzip) the downloaded file and then parse the XML.  Instead of downloading and storing the zip file on the file system, extracting it as an XML file, and then feeding the file to an XML parser, the App uses the approach of streaming the downloaded data through the necessary processing steps, which avoids the need to manage intermediate files or hold large buffers.<br>
+
+<a href="/assets/uploads/2016/02/Screenshot_2016-02-13_17-24-15.png"><img class="alignnone size-full wp-image-231" src="/assets/uploads/2016/02/Screenshot_2016-02-13_17-24-15.png" alt="Screenshot_2016-02-13_17-24-15" width="731" height="147" /></a>
+
+In Android, the standard library for decompressing a file in the zip format is <code>java.util.zip.ZipInputStream</code>.  It inherits from <code>InputStream</code>, takes a compressed stream as input, and provides the decompressed file as an <code>InputStream</code>.<br>
+For XML parsing using an event model, the standard library is <code>javax.xml.parsers.SAXParser</code>. It returns an SAX interface to the XML parser (<code>org.apache.harmony.xml.ExpatParser</code> in this case), and provides methods to parse files from an XML input source / stream.<br>
+
+Naturally, it should be simple and straightforward to feed the downloaded zip data into the <code>ZipInputStream</code> class, and then feed that stream into the XML Parser. The XML parser should then happily parse the XML contents extracted from the zip file (provided of course that the XML is valid and with the right encoding). <br>
+
+This was implemented in the App, and indeed worked MOST of the time (ever since, and even before, the release of the App), until things go wrong.<br>
+<h3>The contract of read()</h3>
+The problem lies in fine details of how the seemingly simple method, <code>read(byte[] b)</code> (and its cousins) of <code>InputStream</code>, is implemented by its sub-classes, notably <code>ZipInputStream</code>.<br>
+
+The <code>read</code> method is a simple and standard one. It is used to read a byte stream into the provided buffer, <code>b</code>.  According to the official documentation of the base class, it -<br>
+<blockquote>Reads some number of bytes from the input stream and stores them into the buffer array <code>b</code>. The number of bytes actually read is returned as an integer. This method blocks until input data is available, end of file is detected, or an exception is thrown.
+
+If the length of <code>b</code> is zero, then no bytes are read and <code>0</code> is returned; otherwise, there is an attempt to read at least one byte. If no byte is available because the stream is at the end of the file, the value <code>-1</code> is returned; otherwise, at least one byte is read and stored into <code>b</code>.</blockquote>
+From the description, it is clear that, unless the length of the buffer array is 0, <code>read(byte[])</code> should return either -1 (indicating the end of input), or the number of bytes read which should be &gt;= 1, and never 0.  If no byte is read but the end of stream has not been reached, the method should block, instead of returning 0.<br>
+<h3>The culprit?</h3>
+Unfortunately,  the <code>ZipInputStream</code> in Android does not seem to follow the semantics strictly. Here is an extract of its <code>read</code> method (Copyright 2005-2008 The Android Open Source Project under Apache 2.0)<br>
+<pre><code>if (inf.needsInput()) {
+    fill();<br>
+    if (len &gt; 0) {<br>
+        entryIn += len;<br>
+    }<br>
+}<br>
+int read;<br>
+try {<br>
+    read = inf.inflate(buffer, start, length);<br>
+} catch (DataFormatException e) {<br>
+    throw new ZipException(e.getMessage());<br>
+}<br>
+if (read == 0 &amp;&amp; inf.finished()) {<br>
+    return -1;<br>
+}<br>
+crc.update(buffer, start, read);<br>
+return read;</code></pre>
+<code>inf</code> is a variable of the <code>Inflater</code> class, a wrapper of a native function to decompress the zip file.  From the extract alone, it seems probable that, when <code>read == 0</code> is returned from <code>inf.inflate()</code>, <code>inf.finished()</code> could possibly be false, and the return could be <code>0</code>.
+
+This indeed happened - the zip file for the update on 12 February, when fetched via https and fed into the <code>ZipInputStream</code> class as input, and in certain versions of Android (2.2 and 4.4, but not 5.0), caused 0 to be returned by the <code>read</code> function in the middle of decompression of the XML stream, well before the end of the stream was reached.<br>
+
+This might be a problem originating from the <code>ZipInputStream</code> class itself, or was due to the behaviour of the underlying input stream (e.g. output from decryption of https stream), with <code>ZipInputStream</code> propagating the (unexpected) problem upwards without dealing with it. I did not further delve into the source to see why, since I had to handle this output either way.<br>
+
+Deviation from the semantics might not be a problem in itself, if the consumer of the stream were tolerant enough.  In fact, in a number of common implementations for consumers of input streams, returns with zero length from <code>read</code> are effectively ignored (for example, by appending nothing to a buffer, and read again). This seems to be the case too for the XML parser in <code>ExpatParser.java</code> which the <code>ZipInputStream</code> in the present case is ultimately fed into: (Copyright (C) 2007 The Android Open Source Project, Apache 2.0)<br>
+<pre><code>/**
+ * Parses XML from the given input stream.<br>
+ */<br>
+private void parseFragment(InputStream in)<br>
+        throws IOException, SAXException {<br>
+    byte[] buffer = new byte[BUFFER_SIZE];<br>
+    int length;<br>
+    while ((length = in.read(buffer)) != -1) {<br>
+        try {<br>
+            appendBytes(this.pointer, buffer, 0, length);<br>
+        } catch (ExpatException e) {<br>
+            throw new ParseException(e.getMessage(), this.locator);<br>
+        }<br>
+    }<br>
+}</code></pre>
+However, unfortunately for this case, the input stream was fed into the parser in a slight convoluted manner. A standard Java class <code>java.io.InputStreamReader</code> was used first to wrap the <code>ZipInputStream</code>, and the reader itself was wrapped in an <code>InputSource</code> class, which also encapsulated other information such as encoding, before feeding to the SAX parser interface. Thus, the stream passed through <code>InputStreamReader</code>'s <code>read()</code> method.  Given the above semantics of <code>InputStream</code>'s <code>read</code>, this intervening method turned the <code>0</code> return of <code>ZipInputStream</code>'s <code>read</code> into <code>-1</code> (which signals the end of the stream), before feeding it into the parser. <br>
+
+The behaviour is evident just by looking at the return statement of <code>InputStreamReader</code>'s <code>read</code> method, used when the buffer length is greater than 0 (note that this code will never return 0):<br>
+<pre><code>return out.position() - offset == 0 ? -1 : out.position() - offset;</code></pre>
+As a result, to the XML parser, the input stream would appear to have reached its end at the juncture when <code>ZipInputStream</code>'s read emitted a 0 return, (less than) half way in parsing the XML file in this instance.  It happened that the truncation occurred just after starting an XML tag, and the following <code>ParseException</code> was thrown by the parser.<br>
+
+<code>org.apache.harmony.xml.ExpatParser$ParseException: At line X, column Y: no element found</code>
+
+It was somewhat lucky that, in this case, the behaviour was reproducible in reruns (perhaps due to the same fragmentation of the input zip stream after decryption operation, enabling the 0 return of the <code>ZipInputStream</code> to be reproduced). This allowed tracking down of the error.<br>
+<h3>The cure</h3>
+<h4>Urgent fix</h4>
+Before this was completely tracked down, I found that the problem could be worked around by simply buffering the whole decompressed XML file in a <code>BufferedInputStream</code> (i.e. by calling <code>mark()</code> with a limit larger than the decompressed file size at the beginning, reading the whole stream until end, and then <code>reset()</code> it, before feeding the stream to the parser).  In retrospect, this was because the buffering of the <code>ZipInputStream</code> by <code>BufferedInputStream</code> (which did not involve the <code>InputStreamReader</code> in-between) was tolerant of 0-byte reads, and the subsequent re-play of the stream to feed through <code>InputStreamReader</code> into the parser no longer produced 0-byte reads.<br>
+<pre><code>BufferedReader reader1 = new BufferedReader(reader);
+reader1.mark(3000000);<br>
+while ((line = reader1.readLine ()) != null) {<br>
+}<br>
+reader1.reset();<br>
+xmlReader.parse(new InputSource(reader1));</code></pre>
+This ugly approach (hardcoded size limit and bad efficiency) was used as a stop-gap patch to fix the problem, and was release at around 1750, 3 hours after the initial report, in the urgent bug-fix version (0.2.2) of the App.<br>
+<h4>Ultimate fix</h4>
+Knowing deeper about the problem, it was fixed by something similar to subclassing the <code> ZipInputStream</code> class and overriding its <code>read</code> methods, e.g.<br>
+<pre><code>@Override
+public final int read(byte[] b) {<br>
+    int ret;<br>
+    do {<br>
+        ret = super.read(b);<br>
+    } while ((ret == 0) &amp;&amp; (b.length &gt; 0));<br>
+    return ret;<br>
+}</code></pre>
+This rectifies the semantics of <code>ZipInputStream</code> 's <code>read</code> function, i.e. that <code>read()</code> would not return 0, unless the buffer is of zero length, allowing the <code>InputStream</code> to be handled by other routine Java libraries without problems. (This is not the actual fix used, which involves modifying an intervening thin layer of <code>FilterInputStream</code> to the same effect.)<br>
+
+Another fix, which could also avoid the problem when used alone, is to bypass the <code>InputStreamReader</code> / <code>InputSource</code> classes in between, and directly feed the byte stream to the parser, i.e. instead of<br>
+<pre><code>XMLReader xmlReader = saxParser.getXMLReader();
+xmlReader.setContentHandler(handler);<br>
+xmlReader.parse(new InputSource(new InputStreamReader(is, "UTF-8")))</code></pre>
+use<br>
+<pre><code>saxParser.parse(is, handler)</code></pre>
+and let the parser deal with the encoding (good luck). This should obviously be more efficient too. So both fixes are applied in the new version.<br>
+<h3>The takeaway</h3>
+The problem is not unique to <code>ZipInputStream</code> (or perhaps its underlying input stream). It seems that a number of other standard libraries in Java is implemented inconsistently in this aspect. See <a href="http://stackoverflow.com/questions/2319395/what-0-returned-by-inputstream-read-means-how-to-handle-this">the answers here</a>. So if one has to pass an (unknown) input stream to a reader class or other consumers which are not tolerant of zero-length reads, either make sure that the <code>read</code> method of the input stream would not return 0 for non-zero-length buffers (which would mean studying its source in most cases, unless explicitly documented), or subclass it similarly to make sure that the semantics are followed.<br>

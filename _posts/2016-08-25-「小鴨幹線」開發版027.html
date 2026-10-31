@@ -1,0 +1,59 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.7"
+date: 2016-08-25 00:28:57
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 432
+---
+<a href="/assets/uploads/2016/08/HKNougat.jpg"><img class="size-full wp-image-434 aligncenter" src="/assets/uploads/2016/08/HKNougat.jpg" alt="HKNougat" width="680" height="507" /></a>
+<!--more-->
+此版本：<br>
+<ul>
+	<li>支援Android 7 鳥結糖，包括
+<ul>
+	<li>提升編繹版本至API 24（Android 7）；</li>
+	<li>支援Android 7的分割畫面（不再出警告及修改動畫顯示流程）及多語言功能（解決某些情況選擇繁體會出簡體的問題）；</li>
+	<li>依從Android 7的節省流量模式；</li>
+	<li>重寫部份排程程序以解決Android 7廢除背景網絡狀態廣播的問題；及</li>
+	<li>提供Doze模式下載選項以助在增強Doze模式下於指定時間下載。</li>
+</ul>
+</li>
+	<li>（終於）加入「接聽後彈出回報提示」功能，方便用戶快速回報廣告電話的同時，亦盡量減少對正常使用的阻礙，包括：
+<ul>
+	<li>回報提示採用拉上展開的界面，提示時減少阻礙畫面，回報時亦只佔用部份畫面；</li>
+	<li>預設僅於「近似廣告電話」來電後，才出現回報提示，「近似廣告電話」純粹根據最新下載的廣告名單計算；</li>
+	<li>用戶亦可自行選擇出現回報提示的其他條件，例如通話短於指定時間才提示，以及IDD來電不作提示等。</li>
+</ul>
+</li>
+	<li>相應地，「近似廣告電話」來電時亦可彈出視窗作通知（可關閉），並顯示附近納入了已下載主名單的廣告電話。接聽及確認後，可作出回報。</li>
+	<li>注意「近似廣告電話」僅是基於已納入名單電話算出，<strong>不一定是廣告電話</strong>，因此只供參考，給用戶「心理準備」。<strong>用戶若因此通知而自行決定不接聽，須注意及自行承擔風險</strong>。
+<a href="/assets/uploads/2016/08/device-2016-08-25-chin-blog.png"><img class="size-full wp-image-440 aligncenter" src="/assets/uploads/2016/08/device-2016-08-25-chin-blog.png" alt="device-2016-08-25-chin-blog" width="426" height="757" /></a></li>
+	<li>此版本亦因應意見及回報，推出兼容性及界面選項，包括：
+<ul>
+	<li>可選擇通話時收到廣告來電的攔截方式（root適用）；</li>
+	<li>顯示服務開啟通知，主要針對Android 4部分機種（如Samsung Note 3）出現的背景服務關閉問題；</li>
+	<li>「接聽或掛斷前不靜音」，試圖暫時解決部分機種（主要為Samsung較新的ROM）出現攔截後變成靜音而不回復的問題；</li>
+	<li>上文提及「容許Doze模式時更新 」，適應Android 6及以上，因Doze引致下載檢查時間大幅延遲的問題</li>
+	<li>以靜音方式攔截，若最終沒有接聽，亦會刪除電話紀錄（之前以靜音方式攔截時，不會刪除電話紀錄）；及</li>
+	<li>提供「開啟程式時觸發自動下載」及「顯示狀態檢查選項」，以及可查閱下次檢查時間，方便用戶。</li>
+</ul>
+</li>
+	<li>上述新功能詳情可參閱已更新的<a href="/2016/02/02/小鴨幹線版本02說明.html">說明</a>。</li>
+</ul>
+<ul>
+	<li>此版本亦修正下述問題（部份之前已提供下載）：
+<ul>
+	<li>解決少部份用戶經Google Play回報，程式異常中止問題，主要是在某些環境下，小鴨內部設定用的content provider會被不明的程式以非預設格式嘗試存取，造成 URI index out of bound Exception；</li>
+	<li>部份罕見的Null Pointer Exception問題；</li>
+	<li>黑白名單若全部電話有「＋」號開首，會忽略「＋」號的錯誤；</li>
+	<li>在特定下載錯誤情況出現下，持wakelock過久導致耗電的錯誤；</li>
+	<li>Android 6或以上切換日夜模式後出現的界面資源錯亂（主要是因6.0內部對資源的緩存，沒有考慮日夜模式）。</li>
+</ul>
+</li>
+	<li>［恆例］更新內建IDD資料。</li>
+	<li>使用較強的optimize選項，嘗試將APK縮至2.4M，減少記憶耗用（但若有回報出現怪問題，下版可能回復至3M）。</li>
+</ul>
+目前對Android 7支援主要為確保運作上的相容性，稍後會增加其他支援。而其實Android 7內部已具有攔截電話API，但只限預設電話程式使用，由於電話程式須與電話本身高度配合，一般用戶不會用第三方軟件，相信只是Google（或手機廠商）自行設立攔截電話資料庫預留的接口。<br>

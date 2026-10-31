@@ -1,0 +1,37 @@
+---
+layout: post
+title: "「小鴨幹線」在三星 Android 11 未能攔截問題"
+date: 2021-05-24 15:31:02
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1587
+---
+<p>最近很多用戶回報，在三星手機升級到 Android 11 後，「小鴨幹線」未能攔截。</p>
+<!--more-->
+<img class="aligncenter size-full wp-image-1591" src="/assets/uploads/2021/05/samsung-kill-app.png" alt="" width="377" height="127" />
+經查閱 <a href="https://dontkillmyapp.com/samsung">Don't kill my app</a> 網站，發覺該網現已將三星列為殺 App 情況最差的等級，根據該網站的討論，指出在三星 Android 11 機種，多項設定或與殺三星殺 App 行為有關:<br>
+<ul>
+ 	<li>「優化電池用量」(Battery optimization)</li>
+ 	<li>「自動優化」(Auto-optimize)</li>
+ 	<li>「最佳化電池」 (Adaptive battery)</li>
+ 	<li>「背景使用限制」(Background restrictions) : lists of Sleeping apps, Unused apps, Deep sleeping apps, Never sleeping apps</li>
+</ul>
+（注意如「優化電池用量」(Battery optimization) 及 「最佳化電池」 (Adaptive battery) 等其實是原生的設定項目，但原生 Android 不會用來殺 App ，換句話說如報告屬實，便是三星自行根據這些設定，自訂不符 Android 標準的殺 App 行為。）<br>
+<p>網站建議可將程式的「優化電池用量」(Battery optimization) 關閉，以停止三星自行殺 App （設定 (Settings) &gt; 「應用程式」(Apps) &gt; 小鴨幹線  &gt; 「電量」(Battery) &gt; 「優化電池用量」(Battery optimization) &gt; 上方選擇「全部」(All apps) &gt; 小鴨幹線  &gt; 關閉優化）。</p>
+除此以外，視乎機種，網站指出可關閉「電池與裝置維護」(Battery and device care)  &gt; 「電量」(Battery)  &gt; 「更多電池設定」(More battery settings)  &gt;「最佳化電池」(Adaptive battery)  、 以及 「電池與裝置維護」&gt; 「電量」&gt; 右上三點 &gt; 「自動化」(Automation) 下的「每日自動優化」(Auto-optimize daily)、「設定時間自動啓動」 (Auto start at set times) 及「最佳化省電」 (Adaptive power saving)。詳見上述連結。<br>
+<h3>Bug or feature?</h3>
+不過，即使做了以上步驟，仍有回報指三星會繼續殺 App，見此 <a href="https://github.com/urbandroid-team/dont-kill-my-app/issues/307#issuecomment-827649020">Github issue</a>。據有回報的 log 顯示，是三星獨有的一個叫 <code>ChimeraPolicyHandler</code> 的程序，每小時運行數次，選擇性殺 App。Log 顯示一些 App 如 Google Search 及 Samsung 本身的 App 不會受影響（可能是內置白名單？）。即使 App 已宣告為 Foreground App (如小鴨幹線)，仍會被殺。<br>
+之後，有跟進回報指，升級系統至 2021年4月1日的 security patch level 後，可以解決 Foreground App (Battery optimization 關閉的 App?) 被殺問題。<br>
+<h3>向大陸品牌手機學習的另例子</h3>
+如 <a href="https://dontkillmyapp.com/samsung">Don't kill my app</a> 網頁指出，三星目前正在使用業界最骯髒的省電手法（Samsung - a dominant vendor in the Android market - is now using one of the nastiest battery saving techniques in the industry）。該網並已將三星放於殺 app 劣行排行榜首位，該位置以往大部份時間由一眾大陸品牌（如華為）所分享。<br>
+另一方面，已有開發者就三星對 Android 11 自行加入額外背景限制問題，<a href="https://issuetracker.google.com/issues/179644471">向 Google 回報</a> （OEM battery optimization saga，需 Google 登入才可閱覽），很到大量「星星」作關注。事實上，同一回報者2年前已作類似投訴 （<a href="https://issuetracker.google.com/issues/122098785">Chinese OEMs constantly violating Android compliance</a>），但這不但沒有被有效處理，連三星等大陸以外品牌，也變本加厲，變成和大陸品牌一樣，需作大量隱蔽設定，才能避免殺 app。<br>
+<h3>建議步驟</h3>
+由於三星有大量機種及 ROM 版本，以上情況未必能一概而論，不過若有問題，建議：<br>
+<ul>
+ 	<li>先使用<a href="/2016/02/13/小鴨幹線0226-APK下載.html">本網</a>下載的「小鴨幹線」完整版（0.2.18）；</li>
+ 	<li>系統設定下，關閉對「小鴨幹線」的「優化電池用量」(Battery optimization)， 「電量 (Battery)」下「背景使用限制」(Background usage limits) 中所有 App 的 未使用程式進入休眠 (Put unused apps to sleep) 功能（據指若只 disable 個別 App， Samsung 數日後會自行加入），及「電量」下「最佳化電池」、「自動化」下的功能；</li>
+ 	<li><strong>將小鴨設為裝置管理員（小鴨設 攔截動作 &gt; 權限設定 &gt; 啟用為裝置管理員），應較有效確保小鴨受保護而免被殺掉</strong>，但基於 Google Play 政策，只有完整版小鴨幹線能啟用為裝置管理員。（注意要停用裝置管理員後才可刪除小鴨幹線）；</li>
+ 	<li>若「小鴨幹線」仍失效，檢查是否已升級系統至 2021年4月1日的 security patch。</li>
+</ul>

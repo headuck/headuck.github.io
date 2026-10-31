@@ -1,0 +1,46 @@
+---
+layout: post
+title: "你個嘢壞咗啊！來電攔截App 突然失效之迷 (下)"
+date: 2018-11-03 21:11:46
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 831
+---
+<a href="/2018/06/19/你個嘢壞咗啊-來電攔截App突然失效之謎(上).html">前文</a>提到，Google 在2018年5月突然於保安更新中，封鎖現有的掛線隱藏功能，令一直依賴此功能的攔截 App 突然失效。
+
+Google 這次有違處理 Android 的一貫作風，此改動修正的，根本不是什麼緊急的保安問題，最多只能說 Android 內部功能之間有不一致的處理。而 Google 收緊 Android 供 App 使用的功能或政策，即使 Google 認為功能被濫用，一般都會給予一段時間，供開發者／用戶適應，不會毫無先兆地推出，例如收緊 Accessibility API 政策，收緊背景執行，以及封鎖其他隱藏 API 等。<br>
+
+<!--more-->
+<h2>鴨神顯靈？</h2>
+不過，就在差不多同一時間， Google 之前仍堅持、不開放掛線功能給非預設電話撥號 App 的態度(見前文)，卻發生了 180 度轉變，不再堅持日後只有撥號程式才可掛線。<br>
+
+在5月15日，Google 人員表示將會在 Android P 中開放另一個掛線的功能 <code>TelecomManager#endCall</code> 給一般 App 使用 (該功能在 Android P 前要<code>MODIFY_PHONE_STATE</code>權限，限於系統使用)，同時，亦表示 Android P 之前的版本(受5月保安更新影響的 Android 6 - 8)，應可以繼續使用原有的隱藏方法掛線，並會將該保安更新還原。這間接引證了，5月的保安更新是未經深思熟慮的。<br>
+
+下文引述出自 <a href="https://issuetracker.google.com/issues/37018641">https://issuetracker.google.com/issues/37018641</a>
+<blockquote>However, a new public API will be introduced to handle this case.
+
+TelecomManager#endCall (note the location; TelecomManager versus TelephonyManager) will be available to callers holding the ANSWER_PHONE_CALLS runtime permission.  This new API complements the existing TelecomManager#acceptRingingCall and provides an app with the ability to answer or reject calls.<br>
+
+A rework for the security patch in question is under way, so the fix "Enhanced permission checks for TelephonyManager#endCall() API" will be modified.  For versions of android prior to P, the expectation is that TelephonyManager#endCall" will still be available via reflection using the CALL_PHONE permission. (5月15日)</blockquote>
+其後，在6月初，Google 提出了明確的復原時間表，即在7月的更新會還原，8月推出永久性的修復。<br>
+<blockquote>My understanding is that it (Blocking of hang up API in May Security Patch) should be reverted in the July security bulletin, with the permanent fix in the August security bulletin. (6月6日)</blockquote>
+<h2>獨立攔截App終於正式獲承認</h2>
+最後，在6月6日推出的 Android P Developer Preview 3 中，加入了<a href="https://developer.android.com/reference/android/telecom/TelecomManager#endCall()">正式的掛線 API</a>。<br>
+
+該API要求 <a href="https://developer.android.com/reference/android/Manifest.permission.html#ANSWER_PHONE_CALLS">ANSWER_PHONE_CALLS</a> 權限，和 TelecomManager 下的接線 API 相同。在加入正式的掛線 API 改動的註釋中，指掛線功能對攔截 App 的確有必要，似乎是首次承認了獨立於撥號程式的攔截 App，仍是有價值的。<br>
+
+以下為註釋原文(取自<a href="https://android.googlesource.com/platform/frameworks/base/+/f858a0e8d23e43fa815962f0c3edbef293d37f7f">https://android.googlesource.com/platform/frameworks/base/+/f858a0e8d23e43fa815962f0c3edbef293d37f7f</a>)<br>
+<blockquote>Make TelecomManager#endCall a public API.
+
+A broad category of apps such as wearable companion apps and call blocking apps rely on the ability to reject a ringing call. Previously this was achieved using a broken TelephonyManager API which lacked permission checks.<br>
+
+To support these applications, removing the @hide attribute on the existing TelecomManager#endCall API so that apps with the existing ANSWER_PHONE_CALLS permission can reject ringing calls and end ongoing calls.  Logically if an app has permission to answer a call, it should be able to end it.</blockquote>
+至此，攔截 App 前途已較明朗，但當各廠家陸續發放5月的更新(接近原生 Android 以外，一般或會遲一個月)，似乎攔截 App 用戶若一直有作保安更新，仍須面對數個月不能掛斷電話的問題，若一些較舊的電話，剛巧／不幸在這期間被廠商放棄而不獲更新，更會永久失去掛線效能。<br>
+<h2>小鴨幹線的應對措施</h2>
+為此，小鴨幹線經研究及發放試驗版確認後，於6月更新的 0.2.12 版加入了臨時應對措施，對 Android 6-8 以及 Android P Preview 2 或以前的版本，會偵測掛斷功能是否正常，若掛斷失效，會建議用戶給予通知存取權，利用通知存取權恢復掛線及接通再掛線功能，務求將用戶影響減至最少。掛斷原理是模擬 headset 操作，類似<a href="https://stackoverflow.com/questions/26924618/how-can-incoming-calls-be-answered-programmatically-in-android-5-0-lollipop#answer-30232515">在此分享的方法</a>。<br>
+
+而為準備 Android P 正式推出，該版亦預早加入偵測及利用新掛線功能的機制，當用戶升級至 Android P (Preview 3 或正式版)，便會自動利用 Android P 最新的掛線功能，無須加入預設撥號功能及強制用戶更改預設撥號程式。<br>
+
+&nbsp;<br>

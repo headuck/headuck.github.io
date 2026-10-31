@@ -1,0 +1,18 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.3"
+date: 2016-02-23 18:34:22
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 259
+---
+再來一個Bug fix 版本，是0.2.1版更新失敗的問題的最後修正，見<a href="/2016/02/14/JavaInputStreamglitchesonAndroid.html">此篇</a>。其他修改包括<br>
+<ul>
+	<li>還原0.2.2版延長了的接聽再掛線時，接聽後的等侯時間，但在LG(Android 4或以下)接聽前不等候電話界面，以解決LG(Android 4或以下)不能接聽再掛線的問題(LG 應該用了com.android.phone以外的電話process名稱)。見<a href="https://blog.headuck.com/?p=210">接通再掛線轉駁至留言</a>問題及感謝Milk回報及測試。</li>
+	<li>解決Samsung (應還有LG)不能刪除Call log問題，感謝hkepc用戶"丨虫虫丨"回報及提供資料。</li>
+	<li>上一版起，因應HKJunkcall加強保安，不再在apk夾附資料庫，用戶須在安裝後自行下載，但由於回報所需的行業資料在資料庫中，若在下載前收到廣告電話，便會因不能選行業等而無法回報，亦不能選擇攔截行業，因此在此版起apk會夾附僅有行業資料而沒有廣告電話資料的資料庫，以讓用戶安裝後可立刻回報電話/選擇攔截行業。(同時亦提醒用戶要下載資料庫)。</li>
+	<li>調整自動更新排程算法，以較緊隨用戶指定時間，以免太「智能」而帶來困擾。</li>
+	<li>更新內建IDD電話格式資料。</li>
+</ul>

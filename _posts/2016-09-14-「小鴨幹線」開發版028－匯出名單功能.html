@@ -1,0 +1,27 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.8 － 匯出名單功能"
+date: 2016-09-14 14:27:07
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 472
+---
+0.2.8版加入了說好的匯出自訂名單功能，方便用戶換機時將原有名單儲存，再在新機匯入。<br>
+<!--more-->
+<a href="/assets/uploads/2016/09/device-2016-09-14-160242-small.png"><img class="size-full wp-image-480 aligncenter" src="/assets/uploads/2016/09/device-2016-09-14-160242-small.png" alt="device-2016-09-14-160242-small" width="432" height="768" /></a>
+注意：<br>
+<ul>
+	<li>用戶可選擇匯出我的黑名單、我的白名單、例外廣告電話名單及例外廣告名稱名單。</li>
+	<li>匯出檔案以「.vch」為延伸檔名，格式與vCard 2.1標準相容，可以匯入至支援vCard的系統，包括Android通訊錄，Google Contacts，outlook等。部份系統在匯入前或須將檔名改為vCard標準的「.vcf」。</li>
+	<li>因為是標準格式，其他有讀取儲存權限的程式，亦有可能掃描及讀取檔案，若有此風險，匯出到內存及備份後請刪除檔案，或直接匯出至雲端儲存(Android 4.4或以上)。</li>
+	<li>在Android 4.3或以下，名單會儲存至系統儲存裝置的根目錄，對大部份手機來說，是內置的記憶（非SD Card）。</li>
+	<li>Android 4.4或以上，會使用Android 4.4起支援的的Storage Access Framework(存儲訪問架構)，使用者可自行選擇存儲服務，包括內置儲存/外置SD Card以至雲端儲存(如Google Drive)，方便轉移。</li>
+	<li>在部份機種，在選擇匯出存儲服務的界面，用戶須選擇右上方的三點菜單、或按menu(<span class="st">選單)鍵</span>，再選擇「顯示SD Card」或「顯示所有裝置」，才可以存儲至SD Card。例子見 <a href="https://metactrl.com/docs/sdcard-on-lollipop/">https://metactrl.com/docs/sdcard-on-lollipop/</a></li>
+	<li>另一方面，和之前一樣，目前只可從內置儲存匯入。匯入前請先將檔案存到該處。</li>
+	<li>有報告指部份Android 5.0手機，因為系統有bug而不能匯出至沒有名稱的SD Card，此問題不能繞過，請使用有名稱的SD Card（一般由相機或電腦格式化時指定）。</li>
+</ul>
+此外0.2.8版亦更新了IDD資料。<br>
+<p>&nbsp;</p>
+<p>&nbsp;</p>

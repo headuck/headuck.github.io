@@ -1,0 +1,36 @@
+---
+layout: post
+title: "Android P : 電話攔截軟件末日？"
+date: 2018-01-21 18:35:52
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 665
+---
+據XDA近日一篇文章，Xposed作者rovo89發現，Google在Android源碼(AOSP)中，剛加入了新的機制，目的很可能是禁止一般App在下一版Android中，使用在AOSP源碼中標注為隱藏(<code>@hide</code>)的應用程式介面(API)。<br>
+<!--more-->
+XDA文章 : <a href="https://www.xda-developers.com/google-undocumented-hidden-apis-android-p/">https://www.xda-developers.com/google-undocumented-hidden-apis-android-p/</a>
+如該文所述，由於部份Android的功能，由於沒有正式的API，一般App目前只能透過用特別方式(如Java reflection)呼叫隱藏API才能使用。因此在Android P及以後，除非Android另行提供正式的公開介面，否則Apps或將不可再使用這些受影響的功能。<br>
+<h3>隱藏的功能，本來就不應該用嗎？</h3>
+不幸的是，電話攔截的其中一項核心功能 ╴電話掛線，目前只能透過隱藏API使用[1]。<br>
+雖然Android N起，提供了正式的攔截API，包括 <code>BlockedNumberContract</code> ，供App加入攔截名單，由系統攔截 ╴好處是，由於名單是系統功能的一部份，App不用於背景運作，沒有殺App問題；但是，該名單只限由用戶設為預設的電話撥號／短訊程式，或有電訊商權限的程式(配合SIM Card)存取。另外，預設電話撥號程式亦可實作 <code>CallScreeningService</code> 的API，指示系統如何處理電話。<br>
+因此，Android P及以後，目前的攔截軟件若不轉型，便可能會失去攔截功能，只能將電話轉為靜音或彈出提示(如無加入其他進一步限制的話)。<br>
+<h3>那麼轉型為撥號／短訊程式便OK？</h3>
+一般攔截App沒有電訊商權限，要使用正式API的掛線功能，攔截App便要加入撥號或短訊功能，並由用戶選擇成為預設電話撥號／短訊程式[2]。<br>
+但一般用戶，絕少會更改跟機的預設撥號程式，因為首先多了設定要做，亦會出現兼容問題，而即使兼容，亦會失去很多配合機款或較先進的功能。而第三方軟件UI介面亦可能與系統格格不入。此外，撥號及短訊軟件亦需要更進一步的權限，引起憂慮(雖然目前攔截軟件已須大量權限)。<br>
+<h3>Google會開放掛線API嗎</h3>
+當然，若Android另行為攔截軟件提供電話掛線的公開介面，便沒有以上問題。<br>
+<p>但觀乎在Android O起，Google加入接聽電話的正式API及相關權限，但並無加入相關的掛線的正式API，而Android P發展中的源碼，只見有意加強系統本身的攔截機制，(如加入攔截不在通訊錄電話的機制)，卻沒有開放掛線API的跡象。似乎Google有意將目前攔截App的功能，納入系統機制中，但機制主要是為電話廠商和電訊商提供攔截服務而設。</p>
+這合乎Google一直收緊對第三方App背景運作及權限的趨勢，尤其是不時傳出某些來電反查軟件，一直有上傳用戶通訊錄的私隱問題，Google逐步收緊此類軟件的空間也不為奇。<br>
+<h3>你恥笑過iPhone不能攔截電話嗎</h3>
+反觀iOS，在版本iOS 10以後，已開放API給一般App攔截電話(以預先設定名單方式)，不用改變dialer(因為iOS不會容許第三方dialer)。以往iOS用戶羨慕Android可簡單攔截電話，iOS則要用迂迴方式並只能彈出提示，或光顧電訊公司的服務，風水輪流轉，日後情況可能要反轉。<br>
+<blockquote>[1] App目前要透過Reflection，呼叫
+<code>TelephonyManager</code> 中的 <code>getITelephony</code> ，以取得 <code>ITelephony</code> 內部電話服務的實作，再藉此呼叫掛線功能。
+Stackoverflow上有關該隱藏API的相關細節 :<br>
+<a href="https://stackoverflow.com/questions/1083527/how-to-block-calls-in-android">https://stackoverflow.com/questions/1083527/how-to-block-calls-in-android</a>
+<a href="https://stackoverflow.com/questions/20965702/end-incoming-call-programmatically">https://stackoverflow.com/questions/20965702/end-incoming-call-programmatically</a></blockquote>
+<blockquote>[2] 如用戶能接受使用攔截軟件作為<strong>短訊</strong>軟件，即可使用Android N加入的 <code>BlockedNumberContract</code> 機制，好處是短訊軟件可能較<strong>撥號程式</strong>易取得兼容，但由於 <code>BlockedNumberContract</code> 機制是以預先設定黑名單的方式運作，不能藉規則(如某字頭)進行，現行功能會打折扣(如不能攔截「＋」開頭的電話)。
+而使用 <code>CallScreeningService</code> 機制則較靈活，可按實際號碼判斷是否攔截，但只能由透過成為預設<strong>撥號程式</strong>進行。</blockquote>
+2018年3月1日更新: Google 已正式公布上述政策改動，但會分階段進行讓App有時間自行修改，見<a href="https://android-developers.googleblog.com/2018/02/improving-stability-by-reducing-usage.html?m=1">Android Developers Blog</a>。<br>
+3月8日更新: <a href="/2018/03/09/小鴨@AndroidPPreview1測試.html">小鴨 @ Android P Preview 1 測試</a>

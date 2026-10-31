@@ -1,0 +1,39 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.5"
+date: 2016-03-28 02:54:55
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 312
+---
+<del>為慶祝北海道新幹線326開業，</del>此版本：
+<ul>
+	<li>（繼向量繪圖後，繼續使用 Support Library 23.2 的新功能），Android 4或以上<strong>增設夜間模式</strong>（深色主題），晚上使用可免傷眼，（不過目前沒有色溫功能，除非與Android N Preview隱藏的夜間模式共同），亦可使用<strong>自動切換</strong>，在晚上10時至早上6時之間，自動使用夜間模式（時間為Support Library內建，目前不可調較）；</li>
+	<li>因應建議，<strong>增設語言設定</strong>，override系統設定，即使系統設為英文也可在App內用中文（反之亦然）；</li>
+	<li> 兼容性選項，包括
+<ul>
+	<li>可縮短或延長<strong>接聽或掛線的延遲</strong>（可選擇更快速掛線，但有部份機種若太快會出現問題），</li>
+	<li><strong>接聽再掛線</strong>模式時，<strong>不等候電話進程</strong>便接聽（部份機種如LG若使用接聽再掛線，可能須使用）﹐</li>
+	<li>在<strong>攔截後強制解除靜音</strong>，若使用了會設定鈴聲漸大或其他同時影響鈴聲的Apps／設定，如一些Sony機的設定，攔截後可能變為靜音，可使用此選項；</li>
+</ul>
+以上兼容性選項，若使用上沒有問題，便不用調較；</li>
+	<li>更新IDD資料（包括內地新增手機號碼）；</li>
+	<li>因應N Preview，減少使用分割畫面時resize的問題，以及小修正使N Preview亦能使用接聽再掛線。</li>
+</ul>
+目前未正式支援Android N，因此開啟分割畫面會出警告，不過應沒有重大問題。預計日後Android N會正式加入夜間模式，到時App內的夜間模式切換將可與系統掛勾。<br>
+
+［30／3／2016］更新:由於此版本在某些情况(Activity在背景被停止後再度被創立，通常在記憶不足或中止界面一段時間重啟)出現閃退問題，已暫時停止推出，直至問題解決。但已更新的用戶不會返回前一版本。有關問題影響界面但不會影響攔截。<br>
+
+［17／4／2016］更新:已推出0.2.6版，為0.2.5版的除錯版本，也再更新了IDD資料及讀取部份LG call log的問題（感謝King的回報及幫助）。<br>
+<!--more-->
+
+（錯誤詳情：0.2.5版閃退起因，是release build中使用proguard縮短Java中類別等名稱時，將support library中多個承繼自<code>Parcelable</code>的介面類別也縮小，但<code>Parcelable</code>中一個定義為<code>public static final android.os.Parcelable$Creator CREATOR</code>的成員，Android framework會透過reflection，籍其名稱存取的，因此被proguard縮小後，framework在取用<code>Parcelable</code>這些子類別的<code>CREATOR</code>成員時，便產生exception<br>
+<code>android.os.BadParcelableException: Parcelable protocol requires a Parcelable.Creator object called CREATOR
+</code>
+這個Exception只在Android的Activity被Destroy再被Create時，才會發生，而一般Android不會在用戶離開Activity後立即將Activity毀滅的，所以要離開介面，等一段時間，再進入同一介面才會發生。或者在Android的Developer options內啟用不要保留活動，即會試出問題。（日後出街前的release build都應用這個試試！）<br>
+
+在proguard的規則中設立例外，避免各Class / InnerClass 的<code>CREATOR</code>成員名稱被縮小，便解決此問題。<br>
+
+實在不知為何這不是Android Studio的proguard內建預設內，因為是framework本身要用到的。）<br>

@@ -1,0 +1,20 @@
+---
+layout: post
+title: "有關 Google Play 上的 0.2.23g 版「小鴨幹線」"
+date: 2024-07-11 12:55:19
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1860
+---
+雖然「小鴨幹線」將在稍後從 Google Play 下架，不過由於仍有一批用戶使用數年沒有更新的舊版本，而該版本應已無法下載新的名單，所以將 Google Play 版本更新到可以運作的 0.2.23g (對應 0.2.23 版，有關更新見<a href="/2024/07/02/小鴨幹線-開發版0223趁71-推23-增粵語-去邊緣.html">前文</a>)。<br>
+<!--more-->
+<img class="aligncenter size-full wp-image-1862" src="/assets/uploads/2024/07/Screenshot_2024-07-11_12-51-58.png" alt="" width="1065" height="512" />
+<p>當初停止更新，是因為更新後會觸發 Google Play Protect 誤將「小鴨幹線」列為有害程式，從而發出通知警告用戶，即使最後成功上訴， Google 也不會承認有錯及向被警告用戶發出澄清。</p>
+<p>但自去年底起， Google 開始針對非 Google Play 下載（sideload）的 App，視乎設定，會自動（或要求用戶）將此類 App 上載到 Google 掃描。所以，即使不在 Google Play 推出新版，也會觸發 Play Protect 將程式列為有害（而前兩個版推出時，亦確實觸發了 Play Protect 在部份手機將小鴨列為有害，在約一天後撤回，這兩個版本在 VirusTotal 的多家廠商掃描後均無問題，可推斷 Google Play Protect 的誤報率極高）。</p>
+<p>所以除非所有用戶都關閉了 Play Protect 的自動上載 sideload APK 給 Google 的設定（沒有可能），是否更新 Google Play 版本，也不能避過 Google Play Protect 的掃描及將程式列為有害。</p>
+<p>和之前一樣，由於 Google Play 對權限的限制， 0.2.23g 和 0.2.23 的分別，是不能刪除系統來電紀錄，及不能設為系統管理程式以在攔截後關閉屏幕（不過如果設定為預設來電程式，這兩項在大部份情況已不需要[1]）。此外，由於 Google 正常情況下不允許 App 直接連結到把 App 加入「忽略電池優化」（視乎版本或品牌，或稱優化電池使用量，或背景運作無限制）的設定畫面，在 0.2.23g 上，系統權限設定中的「忽略電池優化」設定會較繁複（用戶須自行在拉下選單中，選擇「所有程式」，再選「小鴨幹線」，才能到達設定畫面）。（這無疑是故意設計出來為難用戶的）。</p>
+由於「小鴨幹線」將從 Google Play 下架，如果希望收到更新通知或自動更新，<strong>建議使用 F-Droid 下載</strong>（見<a href="/2024/06/14/小鴨幹線-專屬F-droid軟體庫啟用.html">此頁</a>)。<br>
+<strong>更新(11/2024)：「小鴨幹線」已從 Google Play 下架</strong>
+<p>[1] 視乎版本，被預設來電程式攔截直接掛線的電話，應不會開屏幕。預設來電程式攔截後的電話亦可能不會加到系統紀錄中。但除非預設來電程式擁有聯絡人權限，否則不能攔截電話簿內的來電，要靠原有方式攔截。</p>

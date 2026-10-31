@@ -1,0 +1,31 @@
+---
+layout: post
+title: "?晒頭的第二個Crash Report"
+date: 2016-01-05 13:45:53
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 129
+---
+<p>留意係，有5M free space(雖然好少)，攞16k時發生Out Of Memory。</p>
+<code>java.lang.OutOfMemoryError: Failed to allocate a 16396 byte allocation
+with 5746272 free bytes and 111MB until OOM<br>
+at com.android.internal.util.FastXmlSerializer.(FastXmlSerializer.java:55)<br>
+at com.android.internal.util.XmlUtils.writeMapXml(XmlUtils.java:183)<br>
+at android.app.SharedPreferencesImpl.writeToFile(SharedPreferencesImpl.java:597)<br>
+at android.app.SharedPreferencesImpl.access$800(SharedPreferencesImpl.java:51)<br>
+at android.app.SharedPreferencesImpl$2.run(SharedPreferencesImpl.java:512)<br>
+at android.app.SharedPreferencesImpl.enqueueDiskWrite(SharedPreferencesImpl.java:533)<br>
+at android.app.SharedPreferencesImpl.access$100(SharedPreferencesImpl.java:51)<br>
+at android.app.SharedPreferencesImpl$EditorImpl.commit(SharedPreferencesImpl.java:455)<br>
+at com.headuck.headuckblocker.bj.a(Unknown Source)<br>
+at com.headuck.headuckblocker.UpdateService.e(Unknown Source)<br>
+at com.headuck.headuckblocker.UpdateService.a(Unknown Source)<br>
+at x.a.onHandleIntent(Unknown Source)<br>
+at android.app.IntentService$ServiceHandler.handleMessage(IntentService.java:65)<br>
+at android.os.Handler.dispatchMessage(Handler.java:102)<br>
+at android.os.Looper.loop(Looper.java:145)<br>
+at android.os.HandlerThread.run(HandlerThread.java:61)</code>
+<p>Samsung Galaxy S5, Android 5.0, 玩緊games時background發生，background無UI無bitmap的。上面OutOfMemory時已經background update完，update緊status準備quit。</p>
+<a href="http://stackoverflow.com/questions/34604211/java-lang-outofmemoryerror-on-android-5-0-caused-by-a-16k-allocation-when-5m-is/34604322#34604322">問左條問題</a>，睇下有無高人指點。

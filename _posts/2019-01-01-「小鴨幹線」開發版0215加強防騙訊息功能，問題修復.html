@@ -1,0 +1,33 @@
+---
+layout: post
+title: "「小鴨幹線」開發版 0.2.15 – 加強防騙訊息功能，問題修復"
+date: 2019-01-01 18:47:56
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 908
+---
+<h3><strong>重要預告</strong>：Google Play版本將移除「刪除系統來電紀錄」及「撥出防護」功能</h3>
+<blockquote>由於 Google 的政策，以私隱為由，逐步收窄 Google Play 上第三方 App 的功能（<a href="/2018/11/30/有關-小鴨幹線-暫被下架(2)之麻煩陸續有來.html">見此文</a>），除非有突發改變，否則由一月中開始，在Google Play 上的版本，將被迫廢除「刪除系統來電紀錄」及所有「撥出防護」功能。要繼續使用相關功能(或同樣面對 Google Play 下架威脅而撇回的關閉屏幕功能)，請（1）在 Google Play 關閉小鴨幹線App的自動更新，（2）將來的更新，可在本網站的<a href="/2016/02/13/小鴨幹線0226-APK下載.html">此頁面</a>下載完整版本 APK 安裝。</blockquote>
+<!--more-->
+<h3><strong>IMPORTANT NOTICE</strong>："Erase system call records" and "Outgoing call checks" will be removed in the next Google Play version of Headuck.</h3>
+<blockquote>Due to Google policies to restrict third party Apps on Google Play on privacy reasons, from mid-Jan 2019 onwards, Headuck is forced to remove the above functions from its Google Play version. To continue the use of these functions, as well as the lock screen after block function (removed due to Google Play de-listing threats), you may（1）disable Headuck auto-update in Google Play,（2）download future full versions of Headuck from <a href="/2016/02/13/小鴨幹線0226-APK下載.html">this page</a></blockquote>
+<h2>0.2.15版: 加強防騙訊息相關功能</h2>
+之前為配合警方截騙行動，加入「防騙貼士」一欄，顯示反詐騙協調中心（ADCC）的最新騙案警示，於12月活動前推出，由於時間關係，尚未完善，只為一個簡單列表<small><del>，算係交到功課</del></small>。而此版加入相關實用功能：<br>
+<ul>
+ 	<li>列表中標示「新增」（新加入而尚未閱讀）的警示訊息；</li>
+ 	<li>在有「新增」訊息未閱的情況下，在「防騙貼士」欄標題，題示紅點，以提示有新警示訊息；</li>
+ 	<li>就較為重要的警示（如新騙案手法），下載訊息後，會彈出系統通知。若為Android 8或以上，此類通知會使用獨立的通知頻道，用戶可自訂通知重要性，如是否顯示及顯示方式；及</li>
+ 	<li>用戶可用右上方菜單將所有訊息標為已閱讀。</li>
+</ul>
+希望相關功能可更快速及有效，提醒用戶最新騙案手法。<br>
+<h2>其他問題修復及功能變動</h2>
+其他問題修復及功能變動包括：<br>
+<ul>
+ 	<li>在廣告名單跳轉至機構名單（或倒轉）時，會保留所搜尋的電話，方便一次過在兩個名單搜尋同一號碼；</li>
+ 	<li>修復 Android 8 或以上，調整彈出視窗位置時彈 App 問題；</li>
+ 	<li>修復下載訊息後，由第三方程式庫引起，主要在 Android 6 間中出現的彈 App 問題；</li>
+ 	<li>更新 IDD 資料。</li>
+</ul>
+此外，小鴨接到大量 Nokia 手機在升級 Android 9 後，攔截服務啟動時出現問題，因 5 秒內未有顯示服務啟動的前景通知而被系統殺 App - 在 5 秒內顯示通知是 Android 8 的新要求，但小鴨在 Android 8 的 Nokia 機以至其他 Android 9 手機，也沒有大量出現相關問題，此版試圖加快顯示前景通知時間，看看有沒有減輕 Nokia 升級 Android 9 後的問題。<br>

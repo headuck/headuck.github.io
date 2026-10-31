@@ -1,0 +1,33 @@
+---
+layout: post
+title: "Most stupid dialog ever made"
+date: 2016-01-02 17:49:31
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 116
+---
+竟然要寫的咁嘅野...<br>
+<a href="/assets/uploads/2016/01/Screenshot_20160102-172054.png"><img class="alignnone size-full wp-image-117" src="/assets/uploads/2016/01/Screenshot_20160102-172054.png" alt="Screenshot_20160102-172054" width="480" height="800" /></a>
+<!--more-->
+<pre>new AlertDialog.Builder(FilePicker.this)
+        .setMessage(R.string.file_picker_android_read_error_android_bug)<br>
+        .setPositiveButton(R.string.file_picker_kill,<br>
+                new DialogInterface.OnClickListener() {<br>
+                    @Override<br>
+                    public void onClick(DialogInterface dialog, int which) {<br>
+                        finish();<br>
+                        System.exit(0);<br>
+                    }<br>
+                })<br>
+<p>.setNegativeButton(R.string.file_picker_cancel,
+                new android.content.DialogInterface.OnClickListener() {</p>
+@Override<br>
+                    public void onClick(DialogInterface dialog, int which) {<br>
+                        finish();<br>
+                    }<br>
+                })<br>
+        .show();</pre>
+真係要用<code>System.exit(0);</code>咁毒，正常絕對唔應該用。（理論上，要先check晒有無background task同service做緊import等等，不過，除非user俾完storage permission又去setting revoke返之後又再要過，否則都係用一次咁多...）<br>
+Bug references:　Stackoverflow <a href="http://stackoverflow.com/questions/32082845/writing-external-storage-doesnt-work-until-i-restart-the-application-on-android">此篇</a> 及 Android issues tracker <a href="https://code.google.com/p/android-developer-preview/issues/detail?id=2982">此篇</a>。<br>

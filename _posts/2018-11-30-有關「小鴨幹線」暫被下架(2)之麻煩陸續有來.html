@@ -1,0 +1,52 @@
+---
+layout: post
+title: "有關「小鴨幹線」暫被下架 (2) 之 麻煩陸續有來"
+date: 2018-11-30 00:18:57
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 855
+---
+<a href="/2018/11/17/有關-小鴨幹線-暫被下架.html">續上文</a>
+
+由於 Google Play 有極大量App，Google似乎只能靠 AI 去估計什麼App有問題，亦可能只靠 bot 去回覆查詢，問題是AI不是真的有智慧，只是靠之前有問題 App 的特徵作訓練，再從新個案中根據特徵找出大機會有問題的 App。若以此而隨時將 App 下架，不經真人檢查，再將處理開發者問題的要求交由bot自動處理(或不處理)，則 Google Play 對(無權無勢的小)開發者，毫無服務可言，另一方面，卻因其近乎壟斷地位，App 的購買及 App 內交易，卻仍維持極高比率的佣金。<br>
+
+<!--more-->
+
+此外，Google亦正漸漸透過各種理由，收窄各類與Google構成競爭的App的空間。就以攔截App來說，Google因私隱理由，下年初開始，所有使用讀寫系統來電紀錄及處理撥出來電的App，要在Google Play上架，都要事先向Google特別申請，而新政策下，似乎攔截App除非被設為預設電話App，否則不能使用寫入來電紀錄及處理撥出電話的功能。而小鴨幹線在申請及提出原因後，仍被否決使用這兩項功能，亦如一貫作風，沒有(實質)解釋：<br>
+<blockquote>Thank you for contacting the Google Play team. We have received the following information in the Permissions Declaration Form you submitted:
+
+Q1 - Core use case(s)<br>
+
+Caller ID, spam detection, and blocking, Out-going call protection against wangiri scam<br>
+
+Q2 - Declared permission(s)<br>
+
+READ_CALL_LOG<br>
+
+WRITE_CALL_LOG<br>
+
+PROCESS_OUTGOING_CALLS<br>
+
+I’ve reviewed your request and found that your app, Headuck Call Blocker / Caller ID DEV (HK), com.headuck.headuckblocker.dev, does not qualify for use of the requested permissions for the following reasons:<br>
+
+The declared feature Caller ID, spam detection and spam blocking is allowed; but not approved for the specific permissions you’ve requested (PROCESS_OUTGOING_CALLS,WRITE_CALL_LOG)</blockquote>
+換句話說，影響所及，Google Play上架的「小鴨幹線」，明年起不可以再刪除已攔截電話的系統紀錄(要 WRITE_CALL_LOG 權限)，以及防止用戶誤撥一響來電地區，即剛在上一版推出的撥出防護功能(要PROCESS_OUTGOING_CALLS 權限)。注意禁止攔截 App 使用這些功能，對已有用戶明確給予讀取來電紀錄權限的攔截App來說，並無關私隱保障，純粹是限制非預設撥號來電App的功能。<br>
+
+剛巧，Google 的 Android 預設電話 App，剛在本年中加入攔截及回報推銷來電功能....<br>
+
+<img class="size-full wp-image-856 aligncenter" src="/assets/uploads/2018/11/ty.jpg" alt="" width="600" height="340" />
+
+類似情況，發生在與 Google Assistant 競爭的自動化 App (功能將受明年起的同一政策限制)，與 Google Play Services 內置 Wifi 定位功能相若的 Wifi 定位 App 及第三方/公開的 Wifi 定位數據庫(Android 8及9以省電為由，新增的 wifi scan 限制，系統程序如 Google Play Services 不受限)。<br>
+
+上述受影響的攔截及回報，自動化 App 及 wifi 定位功能，有一項共通點，就是可名正言順大量收集用戶回報，習慣及地理數據。<br>
+
+究竟是真巧合還是其他，局外人無從判斷。但事實是，Google 既控制 Android 系統發展，透過 Google Play 授權控制大部份 Android 廠商，亦近乎壟斷 App 的分發渠道，因此 Android 本身開源性質，難以阻止 Google 漸漸透過各種方法使 Android 成為與 iOS 一樣封閉的生態，更甚者是成為令用戶在別無選擇乖乖地向 Google 貢獻私隱數據的工具。( 諷刺的是，Google限制其他 App 理由，往往是保障你的私隱。)<br>
+
+現時唯一可做， 是到以下Android Issue tracker討論圍爐發洩 / star the issue (表示受影響) (要 login google 才看到):<br>
+<ul>
+ 	<li>SMS 及 Call Log 限制<a href="https://issuetracker.google.com/issues/117486314">https://issuetracker.google.com/issues/117486314</a></li>
+ 	<li>Wifi scan 限制<a href="https://issuetracker.google.com/issues/112688545">https://issuetracker.google.com/issues/112688545</a></li>
+</ul>
+&nbsp;<br>

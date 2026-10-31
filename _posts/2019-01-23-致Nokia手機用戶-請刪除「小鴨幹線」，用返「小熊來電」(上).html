@@ -1,0 +1,37 @@
+---
+layout: post
+title: "致Nokia手機用戶 - 請刪除「小鴨幹線」，用返「小熊來電」(上)"
+date: 2019-01-23 00:21:00
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 943
+---
+<p>TL;DR：Nokia 升級 Android 9 後，boot機時會殺掉小鴨，令小鴨無法自行啟動，更會向 Google Play 報告指小鴨出現問題。</p>
+經研究，疑似 Nokia 系統內置 App 殺手所為，因此，<strong>請 Nokia 手機用戶升級 Android 9 後不要安裝/繼續用小鴨，請使用不受影響的「小熊來電」或「Whoscall」等 </strong>。謝謝。<br>
+<!--more-->
+<h2>以「Pure」 Android 為賣點的 HMD</h2>
+話說 HMD 的 Android 手機，主要賣點（除了對 Nokia 品牌的情懷外），就是接近「原生 Android」，而事實上Nokia 去年是出產最多型號 Android One 手機的商廠之一。<br>
+<img class="alignright size-full wp-image-953" src="/assets/uploads/2019/01/hnd.png" alt="" width="953" height="826" />
+<p>對於討厭了某些廠商，將 Android系統加料，預先安裝一堆廠商（或付錢贊助商）指定，沒用卻不能刪除的bloatware App，「原生 Android」有一定吸引力。</p>
+<p>「原生 Android」另一好處，是沒有廠商自行改訂系統，減少與一眾按照 Android 標準而寫的App 不兼容的機會，避免要像一些尤其大陸牌子手機，要經繁複設定，才能讓一些正常App收到通知或於背景運作。</p>
+在App開發者角度，由於開發時一般都會使用Google提供的原生Android模擬器測試，因此使用接近原生的Android的用戶，一般會較少運作上的問題。<br>
+<h2>真的100%沒有加料 ?</h2>
+少年你太年輕了。<br>
+<p>「小鴨幹線」於2018年11月尾升級至符合 Android 8 標準後，在「小鴨幹線」的 Google Play Console 突然湧現了大批不同型號 Nokia Android 9 手機，向 Google 的當機 （學名為ANR） 回報，指在啟動攔截服務時出了問題。</p>
+<img class="size-full wp-image-952 aligncenter" src="/assets/uploads/2019/01/anr1.png" alt="" width="946" height="681" />
+<p style="text-align: center;"><em>"Context.startForegroundService() did not then call Service.startForeground()" 問題，冠絕小鴨App的所有ANR錯誤回報，一個月收到超過 800 次
+</em></p>
+<img class="alignright size-full wp-image-953" src="/assets/uploads/2019/01/anr2.png" alt="" width="953" height="826" />
+<p style="text-align: center;"><em>一入去此問題的詳情，<span style="text-decoration: underline;">全數</span>是Android 9的Nokia機款</em></p>
+同是 Android 9 的其他牌子，包括同是 Android One 以至 Pixel 親生仔，以至華為小米這些問題常客，都沒有此項問題。<br>
+綜合各種跡象，推測問題的原因，很可能是 Nokia 的 Android 9 手機，<strong>加入了原生Android所沒有，極為進取的殺 App（或凍結App）功能</strong>，以致攔截服務剛啟動，未有時間按Android 8 標準完成顯示 Icon 的動作（其實只須以 microsecond 計的時間），使被 Nokia 的殺手殺掉（或凍結），來不及完成Android 8 顯示 Icon 的要求。系統發覺服務沒有遵守要求，便會發出此項錯誤。<br>
+<h2>Don't kill my App</h2>
+經網上搜查，果然有App （Sleep as Android） 的開發團隊，發現 Nokia 手機同樣問題，更找來實機驗証。據其研究所得，Nokia 手機，預載了一間內地 Evenwell 公司出品，名為 com.evenwell.powersaving.g3 的App，以前所未見的粗暴的方式殺 App。套用該開發團隊（Urbandroid）的描述 :<br>
+<blockquote>The problem only occurs on Nokia devices with Android Pie. Nokia started to bundle a toxic app (package: com.evenwell.powersaving.g3, name: Battery protection) with their devices by some Asian company Evenwell. This app kills apps in the most brutal way we have seen so far among Android vendors.</blockquote>
+該團隊近日更綜合經驗，推出了 "Don't kill my App" 網站 （<a href="https://dontkillmyapp.com">https://dontkillmyapp.com</a>），列舉最差的殺App手機，以接近原生Android為噱頭的 Nokia，名列榜首。（而同樣為Android One 的 OnePlus，緊隨其後），竟超越了「深度訂製」的華為、小米。<br>
+<p>同一團隊，更將Nokia 的暴力 App 殺手 com.evenwell.powersaving.g3 抽出並反編繹，再放到 Github :</p>
+<a href="https://github.com/urbandroid-team/dont-kill-my-app/tree/master/killers/nokia/com.evenwell.powersaving.g3">https://github.com/urbandroid-team/dont-kill-my-app/tree/master/killers/nokia/com.evenwell.powersaving.g3</a>
+<p>雖然有暴力成份，不過小鴨都好奇看了一下，果然相當粗暴...</p>
+究竟如何粗暴？為何「小熊來電」或「whoscall」，以至「Whatsapp」等背景App又運作如常？而每次開機後自行手動開啟小鴨又沒有問題？請看<a href="/2019/01/23/致Nokia手機用戶請刪除-小鴨幹線-用返-小熊來電-(下).html">下回</a>分解。<br>

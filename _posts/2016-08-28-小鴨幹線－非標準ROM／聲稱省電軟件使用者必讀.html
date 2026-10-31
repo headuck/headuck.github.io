@@ -1,0 +1,76 @@
+---
+layout: post
+title: "非標準 ROM／聲稱省電軟件使用者必讀"
+date: 2016-08-28 21:45:09
+categories: [pages]
+menu_parent: docs
+order: 3
+tags: []
+wordpress_id: 449
+---
+<strong>若你使用Samsung，ASUS，HTC，Sony及大部份大陸牌子</strong>
+<blockquote>由於不同廠商，在系統自行加入了不同機制，干擾背景程序運作，此外部份聲稱省電省RAM的App，亦有同樣功能，用戶在安裝小鴨程式後，請自行作下文的設定，否則小鴨功能無法正常運作。</blockquote>
+部份廠商，自行修改Android系統，使一些以Android標準編寫的程序，因開機時被阻止啟動、或背景運作被終止，或不獲給予應有權限，而無法運作。<br>
+
+由於此等機款數量太多，而且設定方式亦隨更新而不斷轉變，無法盡錄，若你使用這些手機，請自行將小鴨App設為「省電」、「優化」等的例外，或給予所需權限。以下列出部份常見例子的設定：<br>
+
+<strong>小米MIUI</strong>：須於安全中心，授權管理，給予本App自啟動權限，以及 給予本App允許通知 &gt; 懸浮顯示 (pop up) 權限，並視乎版本，給予信任本程式/電話權限。
+
+<strong>小米MIUI 7</strong>：除上述設定外，須在系統的設定＞進階設定中，在<strong>神隱模式</strong>中，對此App設為使用自訂配置，並允許保持聯網。
+
+<strong>小米MAX（或基於Android 6.0的MIUI）</strong>：除上述設定外，須開啟Android 6 本身，「在其他程式上繪圖」（draw over other apps）權限（可在App內設定＞攔截動作中設定），彈出視窗才會有效運作。
+
+<strong>ASUS Zenfone</strong>：Android 5.0後的Zenfone，須在Auto Start Manager，自行開啟小鴨的auto start。部份機種亦要關閉對小鴨的clean up in suspend。
+
+<strong>Samsung</strong>：
+
+Android 11 請參閱「小鴨幹線」在三星 Android 11 未能攔截問題。<br>
+
+Android 10 參閱以下設定示範短片：<br>
+
+https://www.youtube.com/watch?v=WDMPZyYFvvQ<br>
+
+之前版本：<br>
+
+Android 5-6 版本內建的「智能管理器」（部份稱為「效能優化精靈」）以及Android 7以上的「裝置維護」（其實都是clean master），預設會在一定時間內中止背景運作，令小鴨失效。請在系統的「設定」&gt;「智能管理器」（或「效能優化精靈」/「裝置維護」）&gt;「電量」（部份版本在「記憶體」）內，確定不會自動停止小鴨的背景運作。詳細界面因版本而異，Android 5-6一般在「應用程式省電」的「詳細資料」中，請確保把小鴨不是設定為「省電」（部份稱為「最佳化」），或索性關掉整個「省電」設定，而Android 7則要在「未監控的應用程式」中加入小鴨，或索性在電量版面按右上角3點，「進階設定」中，關掉所謂「應用程式電量監控」。Android 9 請在「裝置維護」&gt;「記憶體」，右上3點「不檢查的應用程式」，加入小鴨幹線，再按加入，之後再在「設定」，「應用程式」，選「小鴨幹線」，選「電量」，「優化電池用量」，將第2行「應用程式優化」拉下再選擇「全部」，將列表中小鴨幹線設為「關閉」<br>
+
+Samsung手機（Android 9）設定示範短片：<br>
+
+https://www.youtube.com/watch?v=asEDZ6d9y6Y<br>
+
+Samsung手機（Android 7.0 - 8.0）設定示範短片：<br>
+
+https://www.youtube.com/watch?v=pJLSOo_0hxQ<br>
+
+Android 4.4 舊ROM （如Note 3）： 因應Kitkat出現的一個Android bug，加上殺掉背景的「進取」設定，請 開啟 程式選項＞顯示服務開啟通知 （新安裝已預設為開）。<br>
+
+<strong>HTC</strong>：一些Android 5.0後的機款，如HTC 10 /U Ultra，內置Boost+ App中的task killer（HTC稱Smart Boost/智慧加速）預設為開，須關閉或將小鴨設為Boost的例外。見<a href="http://www.htc.com/tw/support/htc-u-ultra/howto/861730.html">此頁</a>。
+
+<strong>華為</strong>：EMUI 5 在「手機管理員」(或稱「手機管家」)中，選「清除」(「清理加速」)一項，按設定的齒輪icon，把小鴨加入「記憶體清除白名單」(或稱「內存加速白名單」)
+(如有的話)在「手機管理員」&gt;「權限管理」中，小鴨的權限，請開啟「信任此應用」、「開機自動啟動」、「後台運行」。<br>
+
+EMUI 8或以上似乎沒有可靠方法完全阻止系統停止背景運作，不過可試試在電池設定中，在啟動管理下把小鴨設為「手動」，及開啟所有權限，在耗電排行中允許小鴨自動啟動及關閉鎖屏後清理，另外在「設定」&gt;「略過電池優化」中允許小鴨略過優化（EMUI 9及之後改為「設定」&gt;「電池優化」將小鴨設為「不允許」），並「設定」&gt;「電池」關閉省電模式，參考<a href="https://consumer.huawei.com/en/support/content/en-us00428704/">華為網頁</a>。<br>
+
+不過在 EMUI 8+ 最有效的方法，是停用華為內置的殺App程式 <code class="language-plaintext highlighter-rouge">powergenie</code>(顯示名稱為 HAware)。詳情見 <a href="https://forum.xda-developers.com/mate-20-pro/themes/remove-powergenie-to-allow-background-t3890409">此帖文（XDA）</a>。註：錯誤的 adb 指令可以帶來嚴重後果，責任自負。<code class="language-plaintext highlighter-rouge">powergenie</code>除殺App外，亦會設定對遊戲等降頻及降解像度，減低屏幕亮度等，停用或會引致用電量增加。<br>
+
+<strong>Sony</strong>：Xperia X 新增了所謂「智慧清除工具」（Smart cleaner），在系統「設定」中的儲存記憶選項內，若要使用請把小鴨設定為例外。
+
+<strong>Android 6或以上手機</strong>：一般來說，Android 6的Doze／App Standby mode不會令背景服務終止，故只會影響更新時間而不會影響攔截，但可能部份廠商會在自家的省電模式中，參考系統App Standby的白名單（即關閉電池最佳化的App），終止不在該名單的背景服務。因此若其他方法無效，可試試把小鴨加入關閉電池最佳化的App名單（設定可能在系統＞電池內，但因機種而異）。
+
+<b>聲稱省電、省RAM、防毒的Task killer用戶注意</b>
+<blockquote>一些聲稱省電，清RAM加速效能等的App，亦會在背後殺掉背景服務，令攔截不能運作，或運作一段時間後停止。</blockquote>
+<strong>Clean master／CM Security：</strong>此類App須將小鴨設為例外，方可正常運作，如Clean Master應在記憶體清理(Memory Boost)內點擊右上角3點的程式白名單(ignore list)，在我的列表(My list)內加入小鴨。
+
+如果你使用其他愈出愈多的所謂效能優化的task killer，可自行找出相關設定，或整個disable試試，也歡迎分享設定方法。<br>
+
+<strong>設定後須重啟攔截</strong>
+<blockquote>由於背景運作可能已被中止或沒有啟動，在上述設定後，攔截或不會即時生效。設定後須進入小鴨App內關掉再重啟攔截，攔截方會有效。</blockquote>
+<strong>Headuck 忠告用戶</strong>
+
+Android本身已內建記憶管理及暫存功能，並經Google不斷優化，使用這類額外濫殺背景App的task killer，不但影響正常運作，而且很可能更耗電及減慢效能！更好的做法是找出有沒有不正常耗電的App，有的話將它們用greenify等中止或移除。<br>
+
+參見 <a href="http://lifehacker.com/5650894/android-task-killers-explained-what- they-do-and-why-you-shouldnt-use-them">Android task killers explained</a>。<br>
+
+此外，如果你只使用Google Play下載，Google本身已會檢視Play上的程式，及在有問題時會通知用戶，「防毒」軟件並無必要，反而有耗電及私隱問題。<br>
+
+參考 <a href="http://www.extremetech.com/computing/104827-android-antivirus-apps-are-useless-heres-what-to-do-instead">Android Antivirus Apps are useless。</a>

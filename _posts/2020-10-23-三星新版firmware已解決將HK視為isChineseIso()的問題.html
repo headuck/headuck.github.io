@@ -1,0 +1,57 @@
+---
+layout: post
+title: "三星新版 firmware 已解決將 HK 視為 isChineseIso() 的問題"
+date: 2020-10-23 16:13:21
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1459
+---
+經檢視10月23日早上推出下載的最新版 Galaxy Note20 Ultra 5G firmware（港版，N9860ZSU1ATJ6，10月20日），已解決所有已知將 HK 視為 <code>isChineseIso()</code>的問題。<br>
+<p>不過一如所料，三星始終沒有正面回應，承認或否認有關問題（即使旗艦機款已就同屬 9 月的 security patch level 收到第 3 次更新）。</p>
+<!--more-->
+<a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">Part 2</a> 及 <a href="/2020/10/23/HowSamsungdevicesconnectWiFiusersinHongKongandpossiblyWorldwidetoTencent,Baidu,TaobaoandHao123.html">Part 3</a> 所列的<code>isChineseIso()</code>已被改回只包括 cn 而不包括 hk 及 mo。因此香港的 firmware 在香港網絡運作不會再被特別處理，除非是 Part 3 所述 Wifi-only 平板的情況，更新到 10月20日 的 firmware 後不會再自動查詢或連接 qq.com 及 baidu.com 等。
+<code>WifiConnectivityMonitor</code> 及 <code>NetworkMonitor</code>
+<pre>private boolean isChineseIso(String countryIso) {
+    return "cn".equalsIgnoreCase(countryIso);<br>
+}</pre>
+而 Part 3 提及的 <code>checkCountryCodeFromScanResults()</code> 亦已改為只對 CN 的 Accsss Point 作特別處理。<br>
+<pre>int winnerCount = 0;
+if (countryCodeMap.containsKey("CN")) {<br>
+    cnCount = countryCodeMap.get("CN").intValue();<br>
+}<br>
+String pollWinner = "";<br>
+String stat = "";<br>
+for (String c : countryCodeMap.keySet()) {<br>
+    stat = (stat + c + ": " + countryCodeMap.get(c)) + "  ";<br>
+    if (countryCodeMap.get(c).intValue() &gt; winnerCount || (countryCodeMap.get(c).intValue() &gt;= winnerCount &amp;&amp; "CN".equals(c))) {<br>
+        pollWinner = c;<br>
+        winnerCount = countryCodeMap.get(c).intValue();<br>
+    }<br>
+}<br>
+String currentTime = "" + (System.currentTimeMillis() / 1000);<br>
+try {<br>
+    currentTime = new SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());<br>
+} catch (RuntimeException e) {<br>
+}<br>
+...<br>
+if (winnerCount &gt;= 5) {<br>
+    if ("CN".equals(pollWinner)) {<br>
+        mLastChinaConfirmedTime = System.currentTimeMillis();<br>
+    }<br>
+    if ("CN".equals(this.mCountryCodeFromScanResult) &amp;&amp; !"CN".equals(pollWinner)) {<br>
+        long remainingTime = 86400000 - (System.currentTimeMillis() - mLastChinaConfirmedTime);<br>
+        if (remainingTime &lt; 0) { sb.append(" | Updated [CN 24 hours expired] - CN -&gt; " + pollWinner);<br>
+            mCountryCodeFromScanResult = pollWinner;<br>
+            Settings.Global.putString(this.mContext.getContentResolver(), "wifi_wcm_country_code_from_scan_result", mCountryCodeFromScanResult);<br>
+        } else {<br>
+            sb.append("  |  Country Code changed but not updated - CN -X-&gt; " + pollWinner + " , maintain CN for next " + (remainingTime / 1000) + " seconds");<br>
+        }<br>
+    } else if (!pollWinner.equals(this.mCountryCodeFromScanResult)) {<br>
+        sb.append("  |  Updated - " + this.mCountryCodeFromScanResult + "-&gt;" + pollWinner);<br>
+        mCountryCodeFromScanResult = pollWinner;<br>
+        Settings.Global.putString(mContext.getContentResolver(), "wifi_wcm_country_code_from_scan_result", mCountryCodeFromScanResult);<br>
+    }<br>
+}</pre>
+但注意若附近有較多來自大陸的 access point 的話，用 WiFi-only 的 Galaxy Tab 仍有可能受 <a href="/2020/10/23/HowSamsungdevicesconnectWiFiusersinHongKongandpossiblyWorldwidetoTencent,Baidu,TaobaoandHao123.html">Part 3</a> 所指的問題影響。<br>

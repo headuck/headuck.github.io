@@ -1,0 +1,167 @@
+---
+layout: post
+title: "How Samsung phones force Mainland China DNS service upon Hong Kong WiFi users (Part 1)"
+date: 2020-10-12 03:18:50
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1387
+---
+<p>This is a technical write up of the author's investigation on how users of Samsung phones in Hong Kong (and Macau), using firmware released in September 2020, would be forced to use a public DNS service in Mainland China, which caused unease and privacy concerns among some of its users.</p>
+<p>While this was investigated on a variant of a Galaxy Note 10+ phone targetting the Hong Kong market, it was reported that the issue exists for a wide range of recent Samsung phones, including those sold in other places when used in Hong Kong.</p>
+(Update: The firmware update released in Mid-October 2020 has fixed the DNS issue discussed in this Part, but the issue of DNS queries for <code>qq.com</code> discussed in <a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">Part 2</a> remained unchanged.)<br>
+<!--more-->
+<blockquote>Shameless plug (for Hong Kong users): The author is the developer of Headuck Call blocker (useful only in Hong Kong). Earlier it got mistakenly flagged as malware by Google and lost many of its users, but the appeal was successful and the App is <a href="https://play.google.com/store/apps/details?id=com.headuck.headuckblocker.dev">on Google Play</a> again. Please re-consider the App if you got scared by the earlier Google Play malware warning.</blockquote>
+<h3>Background</h3>
+In early October 2020, a Samsung phone user in Hong Kong, local forum (HKEPC) user dingwinslow209, <a href="https://www.hkepc.com/forum/viewthread.php?fid=168&amp;tid=2586830">reported that (link to forum post in Chinese)</a> an extra DNS server entry, <code>114.114.114.114</code> was added to the DNS setting of his Samsung mobile phone, which was updated with the latest firmware, whenever he was using a WiFi connection.  This happened both when the DNS setting is static, or dynamic using DHCP (but not when VPN / mobile network was used).  Even when both DNS1 and DNS2 were set to valid DNS servers (e.g. Google public DNS service using <code>DNS1 = 8.8.8.8</code> and <code>DNS2 = 8.8.4.4</code>), a new DNS3 entry pointing to <code>114.114.114.114</code> would appear in some utility app.<br>
+This immediately raised privacy concerns among some Samsung users in Hong Kong, as the public DNS server <code>114.114.114.114</code> is owned by Cogent Communications, under <a href="https://www.whois.com/whois/114.114.114.114">Nanjing XinFeng Information Technologies Inc</a>, in Mainland China.<br>
+Subsequently, in another local forum (lihkg), users captured DNS requests to <code>114.114.114.114</code>, and observed queries for "<code>qq.com</code>"  (domain owned by Chinese tech giant Tencent), even when no software from Tencent is installed in the devices.  There were reports that these DNS queries were sent once per minute, so long as the phone screen remained on.<br>
+<p>There are further reports that when DNS queries to qq.com were blocked, the phone would report no internet connectivity via the WiFi connection.</p>
+<p>The observation of the extra DNS entry was later independently confirmed by other forum users and the local media, using recent Samsung phones which have been updated in recent months.  (See the links in the HKPEC post above, in Chinese).  The issue persisted even when users reset their Samsung phone to factory settings. This showed that the issue originates from Samsung firmware instead of some third-party software malware.</p>
+The following documents the technical investigation and verification of the issue directly from analysing the code from firmware.  The information should be sufficient for the issue and its extent to be independently verified.<br>
+<h3>Getting and extracting the firmware</h3>
+To confirm the issue, a recent Samsung Galaxy Note 10+ firmware (SM-N9750 TGY, Hong Kong version), at Security Patch level 2020-09-01 was downloaded from one of the Samsung firmware download sites. Galaxy Note 10+ is one of the Samsung models reportedly affected.<br>
+After unzipping the downloaded firmware (in zip format), expanding the tar file beginning with "<code>AP_N9750ZSU3CTH1</code>", decompressing the file <code>system.img.ext4.lz4</code> using <code>lz4</code>, converting it to ext4 format using <code>simg2img</code>, and mounting it as ext4 volume under Linux, one has access to the system image which would be installed when Note 10+ users update their phone to that patch level. (The same is accessible if a Note 10+ phone is rooted).<br>
+After some research, the culprit was found - a vendor specific service level component, added by Samsung to the Android framework, located at <code>/system/framework/wifi-service.jar</code>. This seems to work at the android system service level, supplementing the usual <code>services.jar</code>.<br>
+The decompiled source of the jar file (using <a class="btn btn--inverse btn--large btn--pill" href="http://www.javadecompilers.com/apk">this site</a>, with Jadx decompiler) has been uploaded to <a href="https://github.com/headuck/SM-N9750-TGY">https://github.com/headuck/SM-N9750-TGY</a>.  The following is a walkthrough of the relevant code when a user connects to a WiFi network, showing how the DNS entries were modified.<br>
+<h3>Relevant flow of DNS entry addition</h3>
+The main culprit is the class <code>com.android.server.wifi.WifiConnectivityMonitor</code>, located in the file <a href="https://github.com/headuck/SM-N9750-TGY/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java">WifiConnectivityMonitor.java</a>. The decompiled code contains the following:<br>
+line 129: the hardcoded address <code>114.114.114.114</code>
+<pre>private static final String CHN_PUBLIC_DNS_IP = "114.114.114.114";</pre>
+line 878: addresses used for DNS probe (to be covered in next part).<br>
+<pre>public final String DEFAULT_URL = "http://www.google.com";
+public final String DEFAULT_URL_CHINA = "http://www.qq.com";<br>
+public String DEFAULT_URL_STRING = "www.google.com";<br>
+public final String DEFAULT_URL_STRING_CHINA = "www.qq.com";</pre>
+This large class is mainly a state machine of the various WiFi states. The state hierarchy are defined, and initial state set, at lines 1185-1197.<br>
+<pre>addState(this.mDefaultState);
+addState(this.mNotConnectedState, this.mDefaultState);<br>
+addState(this.mConnectedState, this.mDefaultState);<br>
+addState(this.mCaptivePortalState, this.mConnectedState);<br>
+addState(this.mEvaluatedState, this.mConnectedState);<br>
+....<br>
+setInitialState(this.mNotConnectedState);</pre>
+The base class for the StateMachine can be found under AOSP source (<a href="https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/com/android/internal/util/StateMachine.java?q=StateMachine.java&amp;ss=android%2Fplatform%2Fsuperproject">StateMachine.java</a>).<br>
+When the device is connected to WiFi, it would enter <code>ConnectedState</code>.<br>
+line 1976 (under <code>processMessage()</code> of the initial <code>NotConnectedState</code>) would be invoked when a new WiFi connection is detected.<br>
+<pre>wifiConnectivityMonitor.transitionTo(wifiConnectivityMonitor.mConnectedState);</pre>
+The <code>mConnectedState</code> variable is of class <code>ConnectedState</code>, defined from line 1988. The <code>enter()</code> method of <code>ConnectedState</code> contains the following code (from line 2090), which uses <code>CHN_PUBLIC_DNS_IP</code> (i.e. the Mainland Chinese controlled DNS server):<br>
+<pre>if (WifiConnectivityMonitor.this.mWifiManager != null &amp;&amp; WifiConnectivityMonitor.this.inChinaNetwork()) {
+    Message msg = new Message();<br>
+    msg.what = 330;<br>
+    Bundle args = new Bundle();<br>
+    args.putString("publicDnsServer", WifiConnectivityMonitor.CHN_PUBLIC_DNS_IP);<br>
+    msg.obj = args;<br>
+    WifiConnectivityMonitor.this.mWifiManager.callSECApi(msg);<br>
+}<br>
+</pre>
+From the code it seems to add the Mainland Chinese DNS service to the user's list of DNS server automatically, when the device is connected to Chinese mobile network. There seems no option to disable the behaviour.<br>
+<code>WifiConnectivityMonitor.inChinaNetwork()</code> is at line 11199.  As suggested by its name, it should obtain the ISO code and return true only if the device is connected to a mobile network in China:
+<pre>public boolean inChinaNetwork() {
+    String str = this.mCountryIso;<br>
+    if (str == null || str.length() != 2) {<br>
+        updateCountryIsoCode();<br>
+    }<br>
+    if (!isChineseIso(this.mCountryIso)) {<br>
+        return false;<br>
+    }<br>
+    if (!DBG) {<br>
+        return true;<br>
+    }<br>
+    Log.d(TAG, "Need to skip captive portal check. CISO: " + this.mCountryIso);<br>
+    return true;<br>
+}<br>
+</pre>
+Digging deeper, this is how the ISO code (<code>mCountryIso</code>) is obtained, under <code>updateCountryIsoCode()</code> at line 11219 (fallback skipped).<br>
+<pre>public void updateCountryIsoCode() {
+    if (this.mTelephonyManager == null) {<br>
+        try {<br>
+            this.mTelephonyManager = (TelephonyManager) this.mContext.getSystemService("phone");<br>
+        } catch (Exception e) {<br>
+            Log.e(TAG, "Exception occured at updateCountryIsoCode(), while retrieving Context.TELEPHONY_SERVICE");<br>
+        }<br>
+    }<br>
+    TelephonyManager telephonyManager = this.mTelephonyManager;<br>
+    if (telephonyManager != null) {<br>
+        this.mCountryIso = telephonyManager.getNetworkCountryIso();<br>
+        Log.i(TAG, "updateCountryIsoCode() via TelephonyManager : mCountryIso: " + this.mCountryIso);<br>
+    }<br>
+    /* fallback when there is no mobile network skipped. The fallback is to read the CountryISO setting from a Samsung config file (cscfeature.xml) */<br>
+    ....<br>
+}<br>
+</pre>
+(While not shown here, this code is also invoked when initializing and when change in ISO code of telephone network is detected, so it need not be called during each check.) The country code is get from <code>TelephonyManager.getNetworkCountryIso()</code> which is a standard Android API, documented <a href="https://developer.android.com/reference/android/telephony/TelephonyManager#getNetworkCountryIso()">here</a>. It returns the ISO-3166-1 alpha-2 country code equivalent of the MCC (Mobile Country Code) of the mobile operator. In Hong Kong, this is "HK", and in Mainland China this is "CN".<br>
+As one might suspect at this point, the problem lies in <code>isChineseIso()</code>, at line 11214:<br>
+<pre>private boolean isChineseIso(String countryIso) {
+    return "cn".equalsIgnoreCase(countryIso) || "hk".equalsIgnoreCase(countryIso) || "mo".equalsIgnoreCase(countryIso);<br>
+}</pre>
+This means that you are treated as being connected to a Chinese mobile network if you are connected to a Hong Kong mobile network for the purpose of adding the 114 DNS service.  (BTW, "MO" is the ISO-3166-1 code for Macau.) Perhaps Samsung might want to address cases when people travel to Mainland China while forgetting to reset their hardcoded DNS settings, and kindly "add" a DNS service which works within the Great Firewall of China. But they seemed to forget that both Hong Kong and Macau are outside the Great Firewall, at least so far.<br>
+Back to the DNS setting code above (line 2090). It makes a binder call to <code>WifiManager.callSECApi()</code>, with message code = 330, with a <code>Bundle</code> setting <code>publicDnsServer</code> to our friend <code>114.114.114.114</code>. While <code>WifiManager</code> is a standard Android class the method <code>callSECApi()</code>, as suggested by its name, is Samsung specific.<br>
+The remote call to <code>WifiManager</code> would end up in the service class implementation at <code>com.android.server.wifi.WifiServiceImpl</code>, implementing WifiService, at <a href="https://github.com/headuck/SM-N9750-TGY/blob/main/com/android/server/wifi/WifiServiceImpl.java">WifiServiceImpl.java</a>. (The class is Samsung's extension to the AOSP service class of the same name). Unfortunately the Samsung specific target method <code>callSECApi()</code> at line 4957 of <code>WifiServiceImpl.java</code> failed to be decompiled to Java and only the smali code is available.<br>
+At line 5069, the case for message code 330 sent above would branch to address label <code>L_0x052d</code>, at line 5706<br>
+<pre>case 330: goto L_0x052d;</pre>
+At <code>L_0x052d</code>, it just forward the call to <code>ClientModeImpl.callSECApi()</code> representing the relevant wifi client connection (r12 being the original <code>android.os.Message</code> parameter)<br>
+<pre>L_0x052d:
+    r11.enforceChangePermission()<br>
+    com.android.server.wifi.ClientModeImpl r0 = r11.mClientModeImpl<br>
+    int r0 = r0.callSECApi(r12)<br>
+    r1 = r0<br>
+    goto L_0x06b0<br>
+</pre>
+The class <code>com.android.server.wifi.ClientModeImpl</code> is at <a href="https://github.com/headuck/SM-N9750-TGY/blob/main/com/android/server/wifi/ClientModeImpl.java">ClientModeImpl.java</a>. The method called, <code>callSECApi()</code>, is at line 10278 (and again cannot be decompiled to Java). Message code 330 leads to the label <code>L_0x0124</code>
+<pre>L_0x0124:
+    r1 = 131286(0x200d6, float:1.83971E-40)<br>
+    java.lang.Object r2 = r14.obj     // Catch:{ all -&gt; 0x02ef }<br>
+    android.os.Message r1 = r13.obtainMessage(r1, r4, r4, r2)     // Catch:{ all -&gt; 0x02ef }<br>
+    r13.sendMessage(r1)     // Catch:{ all -&gt; 0x02ef }<br>
+    monitor-exit(r13)<br>
+    return r4<br>
+</pre>
+The above code send the message with code number 131286 to the (separate) state machine under the class <code>ClientModeImpl</code>.<br>
+line 241 shows that this message is <code>CMD_REPLACE_PUBLIC_DNS</code>
+<pre>private static final int CMD_REPLACE_PUBLIC_DNS = 131286;</pre>
+This message is processed in the <code>L2ConnectedState</code> of the state machine (which covers the child states of obtaining IP, connected, and roaming in the state hierarchy).<br>
+<pre>case ClientModeImpl.CMD_REPLACE_PUBLIC_DNS /*131286*/:
+    if (ClientModeImpl.this.mLinkProperties != null) {<br>
+        String publicDnsIp = ((Bundle) message2.obj).getString("publicDnsServer");<br>
+        ArrayList dnsList = new ArrayList&lt;&gt;(ClientModeImpl.this.mLinkProperties.getDnsServers());<br>
+        dnsList.add(NetworkUtils.numericToInetAddress(publicDnsIp));<br>
+        ClientModeImpl.this.mLinkProperties.setDnsServers(dnsList);<br>
+        ClientModeImpl clientModeImpl13 = ClientModeImpl.this;<br>
+        clientModeImpl13.updateLinkProperties(clientModeImpl13.mLinkProperties);<br>
+        break;<br>
+    }<br>
+    break;</pre>
+Here, the code add the value of <code>publicDnsServer</code> (i.e. <code>114.114.114.114</code> when the device is on Mainland China, Hong Kong or Macau mobile network) to the current list of DNS servers. <code>LinkProperties</code> is a standard AOSP class (<a href="https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/net/LinkProperties.java">source link here</a>). The <code>getDnsServers()</code> call simply returns the list of existing DNS servers in the network link of the Wifi client, while <code>setDnsServers()</code> just set the list, but also removes the duplicates.<br>
+From <code>LinkProperties.java</code> (AOSP source):<br>
+<pre>/**
+ * Replaces the DNS servers in this {@code LinkProperties} with<br>
+ * the given {@link Collection} of {@link InetAddress} objects.<br>
+ *<br>
+ * @param dnsServers The {@link Collection} of DNS servers to set in this object.<br>
+ */<br>
+public void setDnsServers(@NonNull Collection dnsServers) {<br>
+    mDnses.clear();<br>
+    for (InetAddress dnsServer: dnsServers) {<br>
+        addDnsServer(dnsServer);<br>
+    }<br>
+}<br>
+</pre>
+<pre>/**
+ * Adds the given {@link InetAddress} to the list of DNS servers, if not present.<br>
+ *<br>
+ * @param dnsServer The {@link InetAddress} to add to the list of DNS servers.<br>
+ * @return true if the DNS server was added, false if it was already present.<br>
+ * @hide<br>
+ */<br>
+public boolean addDnsServer(@NonNull InetAddress dnsServer) {<br>
+    if (dnsServer != null &amp;&amp; !mDnses.contains(dnsServer)) {<br>
+        mDnses.add(dnsServer);<br>
+        return true;<br>
+    }<br>
+    return false;<br>
+}<br>
+</pre>
+Note that unlike some interfaces, there is no limit to the number of DNS servers under <code>LinkProperties</code>. In other words, this would force the addition of the server <code>114.114.114.114</code> each time when called, if it does not already exist on the list.  It is frutile for users to manually remove or change the setting, since the next call upon network state change will ensure that the server is added back.<br>
+In the <a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">next part</a> I will look into the other issue which concerns some users - the background resolving of <code>qq.com</code>.<br>

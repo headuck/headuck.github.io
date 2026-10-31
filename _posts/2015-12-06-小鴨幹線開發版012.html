@@ -1,0 +1,13 @@
+---
+layout: post
+title: "小鴨幹線開發版0.1.2"
+date: 2015-12-06 18:49:47
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 38
+---
+<p>0.1.2開發版加入了Android 6的權限界面，在用戶要求開始攔截，從call log回報及以聯絡人作為攔截條件（如攔截非聯絡人的來電）時，會彈出dialog box要求取得權限，並在有需要時（即用戶曾拒絕權限要求但又沒有選擇不要再問我）先彈出另一dialog box解釋權限原因。App其他地方已盡量不同dialog box，很disruptive，但這處連串dialog box是按Android 6 API的設計（取權限的是System dialog），沒辦法（幸好一般只會用一次，之後upgrade version都不同再問）。</p>
+如用戶選了不要再問我，系統會自動拒絕權限，要再啟動便要自行<strong>設定＞應用程式＞小鴨幹線＞權限中開啟電話權限</strong>或<strong>聯絡人權限。</strong>
+<p>正做緊取得其他權限的界面（要跳到Settings）及自訂黑白名單（已經變成基本功能）同名稱白名單等。</p>

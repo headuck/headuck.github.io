@@ -1,0 +1,231 @@
+---
+layout: post
+title: "致Nokia手機用戶 – 請刪除「小鴨幹線」，用返「小熊來電」(下)"
+date: 2019-01-23 08:18:59
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 956
+---
+<p style="text-align: center;"><span class="st"><strong>以下內容涉及暴力殺 App 及不當系統行為，敬請留意。</strong></span></p>
+續<a href="/2019/01/23/致Nokia手機用戶-請刪除-小鴨幹線-用返-小熊來電-(上).html">上回</a>，用 Nokia 品牌的 HMD Android 9 手機，預裝 Evenwell 的殺 App 程式，粗略看過其源碼，發覺似乎無時無刻都在尋找殺戮對象，包括手機啟動，任何程序啟動，網絡環境變更等，都會檢查是否要大開殺戒。<br>
+
+<!--more-->
+
+基本上，所有背景啟動，都會即時考慮是否要立即殺死(不是禁止啟動，而是出世後觸發該程式，檢查是後才殺死)， 但亦有不會殺死的種類或情況，包括 :<br>
+<ul>
+ 	<li>最近曾開啟(在 Recent List 頭)的幾個 App</li>
+ 	<li>預設的 SMS App (但沒有 Dialer App)</li>
+ 	<li>NFC 服務觸發的 App</li>
+ 	<li>正在有來電響鈴時，不殺任何 App</li>
+ 	<li>取得audio focus (正播放音樂) 的App</li>
+ 	<li>正在用 network 的 App</li>
+ 	<li>Live wallpaper App</li>
+ 	<li>有顯示 widget 的 App</li>
+ 	<li>預設 launcher</li>
+ 	<li><strong>預先指定的內置白名單App</strong></li>
+ 	<li>進程(process)名稱包含冒號，即App的非主要進程</li>
+</ul>
+追查一下內置<strong>白名單有什麼</strong>(國際版)，發覺有一系列的第三方 App (<a href="https://github.com/urbandroid-team/dont-kill-my-app/blob/master/killers/nokia/com.evenwell.powersaving.g3/res/values/arrays.xml">來源</a>，源碼已被2月7日的 2 個 commit 移除，不過若懂git的話...):<br>
+<pre>ru.megafon.mlk
+kz.beeline.odp<br>
+ru.tele2.mytele2<br>
+net.seddev.callerunknownlocation<br>
+com.app5.rakem.wahmi<br>
+com.KatlinDev.fblikes<br>
+com.nttdocomo.android.remotelock<br>
+jp.softbank.mb.tether<br>
+com.nexon.nxplay<br>
+com.opplysning180.no<br>
+no.intellicom.app1881<br>
+com.ms1881<br>
+com.hthk.ThreeShortCode<br>
+nl.addcomm.afvalwijzer<br>
+de.eplus.mappecc.client.android.alditalk<br>
+au.com.aldi.android<br>
+com.google.android.apps.messaging<br>
+com.anytag.android<br>
+com.azarlive.android<br>
+com.bbm<br>
+com.bell.ptt<br>
+com.turkcell.bip<br>
+com.touchtalent.bobbleapp<br>
+de.knabedesign.bosfrequenz<br>
+com.bt.voiceapps.homeaway<br>
+net.nanabit.callconfirm<br>
+com.studiokuma.callfilter<br>
+com.smartone.callguard<br>
+com.eyecon.global<br>
+com.vladlee.easyblacklist<br>
+com.eupheme.callrecorder<br>
+com.plugmind.cbtest<br>
+com.chaatz<br>
+hu.sanomabp.citromail<br>
+com.clanplay.clanchat<br>
+mobi.drupe.app<br>
+com.bluebeam<br>
+no.digipost.android<br>
+jp.co.nttdocomo.saigaiban<br>
+com.discord<br>
+com.dw.contacts.free<br>
+com.blogspot.acesandroiddevelopment.easywalkietalkie.free<br>
+com.threesixtyentertainment.nesn<br>
+com.modoohut.dialer.theme.dark<br>
+com.modoohut.dialer.plugin.geocoder<br>
+primiprog.waw<br>
+com.oakley.fon<br>
+com.fongo.dellvoice<br>
+fr.freemobile.android.vvm<br>
+com.freedompop.phone<br>
+pl.gadugadu<br>
+com.google.android.gm<br>
+com.jb.gosms.da<br>
+com.jb.gosms.it<br>
+com.jb.gosms<br>
+com.jb.gosms.pl<br>
+com.jb.gosms.sv<br>
+com.google.android.apps.fireball<br>
+com.android.chrome<br>
+com.google.android.apps.tachyon<br>
+appinventor.ai_appsgeniet.MessageGift<br>
+com.handcent.lang.nextsms.hu<br>
+com.google.android.talk<br>
+com.imo.android.imoimbeta<br>
+com.imo.android.imoim<br>
+com.androidintercom<br>
+org.woltage.irssiconnectbot<br>
+com.jio.join<br>
+com.pccw.mobile.sip02<br>
+net.fidanov.landroid<br>
+it.italiaonline.mail<br>
+jp.naver.line.android<br>
+com.uplus.lps.agent<br>
+pl.tmobile.miboa<br>
+de.telekom.android.customercenter<br>
+ru.mail.mailapp<br>
+com.orange.vvm<br>
+msgplus.jibe.sca<br>
+com.facebook.orca<br>
+com.facebook.mlite<br>
+es.ono.MiOno<br>
+com.movistar.android.mimovistar.es<br>
+es.vodafone.mobile.mivodafone<br>
+net.bfgnet.miandroigo<br>
+nl.simyo.mijnsimyo<br>
+com.nosnaj.missatsamtal<br>
+com.yogi.operadora<br>
+ru.beeline.services<br>
+com.putitonline.mmm<br>
+uk.co.o2.android.mynetwork<br>
+com.vodafone.android<br>
+ca.bell.selfserve.mybellmobile<br>
+com.ChinaMobile<br>
+com.conzebit.myplan<br>
+Uxpp.UC<br>
+pt.zon.fon<br>
+mobisocial.omlet<br>
+com.camerum.android.app.operadora<br>
+fi.mobilive.vayrynen<br>
+nu.firetech.android.pactrack<br>
+nl.politie.consumentenapp<br>
+com.motorola.ptt.prip.br<br>
+com.psiphon3<br>
+com.psiphon3.subscription<br>
+se.tactel.reach<br>
+com.ready.android<br>
+com.rediff.mail.and<br>
+com.rts.ic.ym<br>
+com.Rogers.phonebookrogers<br>
+com.sfr.android.sfrmail<br>
+com.sfr.android.vvm<br>
+org.mistergroup.muzutozvednout<br>
+org.thoughtcrime.securesms<br>
+com.skype.raider<br>
+net.daum.android.solmail<br>
+jp.co.nttdocomo.carriermail<br>
+com.surya.STDCodes<br>
+com.reyvilo.android.suiviconso<br>
+pl.netox.supersms<br>
+de.tubs.ibr.dtn.dtalkie<br>
+me.talkyou.app.im<br>
+nl.apps4us.nummerinfo<br>
+org.telegram.messenger<br>
+no.telenor.dekningskart<br>
+dk.shape.teliacontacts<br>
+com.hutchison3g.threeintouch<br>
+br.com.conception.timwidget.timmusic<br>
+com.tokensapp<br>
+com.truecaller<br>
+com.uplus.ipagent<br>
+com.motorola.visualvoicemail<br>
+com.viber.voip<br>
+ca.virginmobile.myaccount.virginmobile<br>
+com.vodafone.messaging<br>
+com.vodafone.mbb.wifimonitor<br>
+de.telekom.mds.mbp<br>
+ru.atrant.worldcallplaceandtime_db_russian<br>
+org.herrlado.websms.connector.arcor<br>
+com.tencent.mm<br>
+com.orderlysoftware<br>
+com.whatsapp<br>
+com.clone.multipleap<br>
+com.gregdev.whirldroid<br>
+com.whooming.WhoomingMobile<br>
+gogolook.callgogolook2<br>
+com.andr.evine.who<br>
+com.sourcebt.android.wifitalkie<br>
+com.mywispi.wispiapp<br>
+jp.co.yahoo.android.ymobile.mail<br>
+com.yahoo.mobile.client.android.mail<br>
+ru.yandex.mail<br>
+com.zing.zalo<br>
+com.microsoft.office.lync15<br>
+us.zoom.videomeetings<br>
+com.Slack<br>
+com.cisco.webex.meetings<br>
+com.microsoft.teams<br>
+com.afwsamples.testdpc</pre>
+當中有即時通訊的 WhatsApp、Telegram、WeChat (com.tencent.mm) 、FB Messenger (com.facebook.orca) 、Line (jp.naver.line.android)、瀏覽器 Chrome，而攔截 App 則包括數碼通「來電管家」(com.smartone.callguard)、小熊來電 (com.studiokuma.callfilter)、Whoscall (gogolook.callgogolook2) ，也有 TrueCaller (com.truecaller)、Calls Blacklist (com.vladlee.easyblacklist)。其他主要是須在背景運作的通訊或VoIP等，主流的程式。<br>
+
+<strong>當然沒有「小鴨幹線」這類小開發者的程式</strong>。
+
+即是說，<strong>Nokia 已預先內訂保護「小熊來電」，「Whoscall」，「WhatsApp」之類主流程式，以及音樂播放，widget等種類的背景服務，在原生標準之上，限制用戶只能使用某種行為或名單指定的程式</strong>，而限制的條件毫不透明，這點和其他「深度訂製」大陸牌子機的所謂省電功能，並沒有分別。<br>
+
+而更甚者，用戶似乎無法簡單地關閉該功能，或自行將 App 加入白名單防止被殺，根據 Don't kill my app 的 <a href="https://dontkillmyapp.com/nokia">Nokia 分頁</a>及其他地方的討論  <a href="https://community.phones.nokia.com/discussion/3428/background-service-killed-even-when-whitelisted">(如這個)</a>，把 App 放入原生 Android 設定的 doze 白名單，是沒有用的。雖然該殺手程式源碼，看來似乎有自訂白名單機制，來讓用戶防止殺 App，但似乎沒有人提及設定方法，未知是否為保持近似原生的設定界面，而將之隱藏。<br>
+
+以上為根據 Don't kill my app 在 Github 公開的源碼分析，不排除 Evenwell 更新該程式，以致現時或日後的效果有所不同。<br>
+<h2>對小鴨的影響</h2>
+上述 Evenwell 殺 App 程式與以往其他同類 App killer不同之處，是既不等待一段較長時間才殺 App，又不一開始時便禁止啟動（或許是因為要視乎 App 行為而決定）。這種方式及 timing，恰恰使要在背景起動的 App，啟動了卻無法完成 Android 8 以上顯示 Icon 要求，而被系統報錯彈 App。<br>
+
+因此，HMD 用戶在升級 Android 9 後，會發覺開機後，WhatsApp 之類主流通訊程式，音樂播放程式，widget 等背景服務運作正常，而小鴨則在啟動後立即死掉或凍結，觸發了錯誤，系統更會耗用數據，向 Google 提交錯誤報告...<br>
+
+即使 HMD / Nokia 用戶屬少數，亦令小鴨自12月起，在Google Play Console 整體表現，ANR (當機彈App) 率大幅提升，已去到會被 Google 處罰的「Bad behaviour threshold」邊<span class="st">緣<span id="yui_3_17_2_3_1548343195538_1686" class="ya-q-full-text">徘徊</span>。</span>
+
+<img class="alignright size-full wp-image-960" src="/assets/uploads/2019/01/anr3.png" alt="" width="922" height="413" />
+
+&nbsp;<br>
+
+所以，希望 <strong>小鴨用戶</strong><strong>若用 HMD / Nokia 手機並使用 Android 9 ，為免耗用電力及數據，請刪除「小鴨幹線」，轉用上述「小熊來電」等，HMD / Evenwell 指定名單內的 App</strong>。<br>
+
+小鴨已將部份 Nokia 機種列為不兼容，以反映事實。<br>
+
+順帶一提，起動失敗後，用戶若手動開啟小鴨 App 再關閉再重啟攔截，小鴨是會如常啟動及運作的，但這完全是幸運(?)的巧合，因為 (1) 前景 App 相關的運作不會被殺，因此開啟小鴨 App 再啟動攔動沒有問題，(2) 之後因為小鴨攔截服務的特別設計(使用了另一非主要進程 :resident 專負責攔截，減少平時佔用空間)，也在殺手 App 的例外，所以服務候命時沒有問題，(3) 處理來電時會啟用主要進程，但殺手App 剛好不會在有來電時殺App，小鴨再避過一劫。<br>
+
+若小鴨沿用一般使用單一進程的設計，應會在一段時間後(如主程式關閉後一段時間)被清除。這也突顯這類 App 殺手準則的隨意性，若非查看源碼，完全不會知道為什麼某些 App 不能運作而其他類似 App 沒有問題的原因。<br>
+<h2>胡亂殺 App 或得不償失</h2>
+一般來說，由於這類殺手 App 一直在背景運作，每當執行新程式或其他觸發其啟動的條件符合時，都會被啟動去檢查一次是否要殺 App，本身會耗用電力，因此在一般情況，省電效果成疑，在 Android 8 以上，系統本身已嚴格規管背景運作的前提下，只會防礙獲用戶同意的後台服務的運作，同時更可能耗用更多電力。<br>
+
+更何况，當一個品牌，以所謂「100%」、「原生」、「pure」Android 為賣點， 但消費者得到的，卻是在原生之上，特別加料的手機，令部份依足標準而製，在真 · 原生系統能運作無誤的 App，無法正常運作，更無法改變設定，變相限制用戶的選擇。用家若事先不知情，或難免有被商品說明誤導的感覺。<br>
+
+當然可能亦有用戶，喜歡原生介面，快人一步的更生速度，而使用 App 的習慣完全與殺手 App 的預設準則一致，又不介意日後 App 選擇被限制，這項「額外」功能，帶來了意想不到的驚喜 ...  那麼，我真係恭喜你呀。<br>
+<h2>HMD「越獄」方法</h2>
+<strong>警告 : 以下內容有危險動作，除非有專人指導、或本身是專人，否則切勿模倣</strong>
+
+若使用 Android 9 的 HMD 手機，又希望突破限制，使用沒有在白名單的背景軟件，包括小鴨，在網上找到了方法，可以透過 adb 在自己 user 刪除該 App 殺手 :<br>
+<p style="text-align: center;"><code class="highlighter-rouge">pm uninstall --user 0 com.evenwell.powersaving.g3</code></p>
+這方法是不用root的，據悉不會影響 OTA (<a href="https://www.xda-developers.com/uninstall-carrier-oem-bloatware-without-root-access/">参考</a>) ，但會不會影響保用便不得而知。<br>
+
+事實上，Evenwell 有大量其他 App 在 HMD 手機背景運作，負責追蹤使用情況及更新。有用戶試過以相同方法刪除了亦沒有問題，參見<a href="https://forum.xda-developers.com/general/general/nokia-2-apps-safe-to-delete-t3783158">這頁</a>。<br>
+
+再戴一次頭盔，<strong>後果自負，若不熟悉 Android adb 及相關工具，請改用指定的背景 App</strong>。<br>

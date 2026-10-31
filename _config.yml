@@ -1,0 +1,81 @@
+title: HeaDuck研究所
+description: HeaDuck研究所 - 小鴨幹線 - 香港製造 Android 攔截來電 App
+url: "https://blog.headuck.com"
+baseurl: ""
+lang: zh-TW
+timezone: Asia/Hong_Kong
+# Deploys are push-triggered, so a post dated later today would otherwise be
+# skipped by Jekyll and never appear until the next push.
+future: true
+
+markdown: kramdown
+highlighter: rouge
+permalink: /:year/:month/:day/:title.html
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-paginate
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+paginate: 11
+paginate_path: "/blog/page:num/"
+
+remote_theme: "mmistakes/minimal-mistakes@4.24.0"
+
+# 🟢 全站所有預設佈局
+defaults:
+  - scope:
+      path: ""
+      type: "posts"      # 所有文章
+    values:
+      layout: "default"  
+  - scope:
+      path: ""
+      type: "pages"      # 所有頁面（包含首頁、以及 blog/index.html）
+    values:
+      layout: "default" 
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
+  - README_LINK_FIX.md
+  - scripts/
+  - "*.py"
+  - export/
+  - html/
+  - old_layouts/
+  - rebuild.sh
+  - "$HOME"
+  # WordPress plugin/statistics junk that must never be published
+  - assets/uploads/bug-library
+  - assets/uploads/redux
+  - assets/uploads/simple-file-list
+  - assets/uploads/wp-statistics
+  - assets/uploads/cache.php
+
+# 🟢 全站所有內容去讀取本地獨立的 custom 佈局
+defaults:
+  - scope:
+      path: ""
+      type: "posts"          # 所有文章
+    values:
+      layout: "custom"      
+  - scope:
+      path: ""
+      type: "pages"          # 首頁（index.md）
+    values:
+      layout: "custom"      
+  - scope:
+      path: ""
+      type: "pages"          # 針對我們剛啟用的 _pages 資料夾
+    values:
+      layout: "custom"      
+
+excerpt_separator: <!--more-->
+show_excerpts: false
+

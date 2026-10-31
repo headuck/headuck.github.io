@@ -1,0 +1,15 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.2"
+date: 2016-02-12 18:15:13
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 213
+---
+<p>此為Bug fix 版本，臨時修正0.2.1版似乎在Android4.4或以下會出現，更新失敗的問題。</p>
+<p>更新失敗是因為在使用新的https方法匯入後，在解壓縮zip file並將內容stream到XML parser時，在（似乎限於Android 4.4 或以下（？））中的XML parser會於中途某一record彈出“no element found“錯誤，原因正在研究。</p>
+<p>0.2.2版先解壓縮整個zip file放在buffer之後再做XML parsing，避開問題。（？）</p>
+<p>此版同時增加了接聽再掛線時，接聽後的等侯時間，以作測試，避免一部份電話來不及完成接聽便因time out而被直接掛線。</p>
+［Edit：更新失敗原因見<a href="/2016/02/14/JavaInputStreamglitchesonAndroid.html">此篇</a>］<br>

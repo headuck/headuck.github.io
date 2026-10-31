@@ -1,0 +1,23 @@
+---
+layout: post
+title: "第一個Crash Report"
+date: 2015-12-30 21:30:50
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 113
+---
+今天小鴨終於有500個user，但又第一次收到crash report。<br>
+<pre>android.content.ActivityNotFoundException: No Activity found to handle Intent { act=android.intent.action.VIEW dat=http://blog.headuck.com (has extras) }
+at android.app.Instrumentation.checkStartActivityResult(Instrumentation.java:1632)<br>
+at android.app.Instrumentation.execStartActivity(Instrumentation.java:1424)<br>
+at android.app.Activity.startActivityForResult(Activity.java:3424)<br>
+at android.app.Activity.startActivityForResult(Activity.java:3385)<br>
+at d.w.startActivityForResult(Unknown Source)<br>
+at android.app.Activity.startActivity(Activity.java:3627)<br>
+at android.app.Activity.startActivity(Activity.java:3595)<br>
+at android.text.style.URLSpan.onClick(URLSpan.java:62)<br>
+:</pre>
+找到問題及答案在<a href="https://commonsware.com/blog/2013/10/23/linkify-autolink-need-custom-urlspan.html">此blog post（The CommonsBlog）</a>。應該因為部手機無裝browser（！），About dialog中的<code>TextView</code>，用了Android的<code>Linkify</code>加條<code>URLSpan</code>的web link後，click落個link時，由於無browser關係找不到對應的Activity，Android URLSpan（起碼4或之前）又無catch <code>ActivityNotFoundException</code>，所以crash左。<br>
+雖然無裝browser的機應該唔多，不過都係將呢度（要subclass左<code>URLSpan</code>再做的處理）同其他用<code>ACTION_VIEW</code>的Intent的地方，加返個try...catch。<br>

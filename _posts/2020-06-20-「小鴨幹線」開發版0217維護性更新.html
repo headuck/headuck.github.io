@@ -1,0 +1,66 @@
+---
+layout: post
+title: "「小鴨幹線」開發版 0.2.17 – 維護性更新"
+date: 2020-06-20 18:50:56
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1273
+---
+<h3>維護性更新</h3>
+0.2.17 版更新，主要是因應原有版本的問題作出修復，包括<br>
+<ul>
+ 	<li>部份較新版本 Android 上的問題，包括攔截失效及對 Whatsapp 通話的影響；</li>
+ 	<li>部份字頭的廣告電話，因內部壓縮程序問題，而未能攔截；</li>
+ 	<li>為符合 Google Play 要求，更新程式庫及資料庫至支援64 bit以及Android 10，至附帶引致的問題。</li>
+</ul>
+<!--more-->
+其他改動包括<br>
+
+<img class="aligncenter size-full wp-image-1278" src="/assets/uploads/2020/06/headuck-save.png" alt="" width="1080" height="928" />
+<ul>
+ 	<li>Android 10 或以上用戶，在移除小鴨程式時，系統會詢問是否保留數據。若用戶選擇保留，在再次安裝小鴨時，原有資料及設定會保留，不用重新設定。因此，用戶可方便地從 Google Play 版及<a href="/2016/02/13/小鴨幹線0226-APK下載.html">完整版</a>間切換，或有問題時重裝程式。但注意請勿在保留新版本資料後，再裝回舊版本；</li>
+ 	<li>配合 <a href="https://android-review.googlesource.com/c/platform/frameworks/ml/+/970739">Android 平台</a>及 Chrome 等的字眼改動，分別將「黑名單」(blacklist) 及「白名單」(whitelist)，改稱「拒接名單」(blocklist) 及「接聽名單」(allowlist)；</li>
+ 	<li>更新 HKJunkcall 的網站認證，讓用戶於 HKJunkcall 下次更新證書時，可繼續下載名單；及</li>
+ 	<li>更新 IDD 資料。</li>
+</ul>
+<blockquote>此版本在模擬器下的 Android 11 預覽版本，暫時運作正常。</blockquote>
+以下為 0.2.17 版修復及維護的技術性詳情。<br>
+<h4>部份較新版本 Android 上的問題</h4>
+<h5>問題（一）：在 Android 10 部份機款，攔截失效。</h5>
+在攔截時可能會因為 Android 系統原有內部接口被移除，以致不再存在或無法使用，而拋出異常，引致攔截失敗。由於在模擬器沒有此情況，只能靠用戶回報估算問題所在，以確認解決問題。<br>
+<h5>問題（二）：Whatsapp 等的通話來電，被小鴨視作匿名來電。若在小鴨設定攔截匿名來電，所有 Whatsapp 來電會被攔截。</h5>
+經查明確認，現行 Whatsapp 版本（不知從什麼版本開始），在較新版本 Android（如 Android 9），會與傳統流動電話一樣，使用新的 Telecom 架構處理來電，因此會照樣被監視來電程式偵測攔截，亦可透過同樣方式攔截。<br>
+
+但另一方面，與傳統電話的來電不同，Android 系統在報告 Whatsapp 通話來電時，不會向攔截程式提供來電號碼資料，引致攔截程式視這些來電為匿名來電。因此，對非傳統電話來說，攔截功能根本不能有用運作。<br>
+
+在 0.2.17 版本，小鴨會作出辨認，只會處理傳統來電，不會理會 Whatsapp 通話及其他來電。<br>
+<h4>部份字頭廣告電話未能攔截</h4>
+為加快攔截偵測，小鴨一直使用自訂的內部壓縮程序，將數萬筆 HKJunkcall 電話，近似電話及相關屬性，壓縮後常駐 RAM 記憶內（平均每個電話佔 1.5 byte），以在來電時可直接查詢記憶，而不用到資料庫搜尋電話。<br>
+
+最近因應用戶回報，發現此內部壓縮程序，在號碼資料排列出現某些組合的情況下，解碼時會出現問題，以致未能查詢某些號碼，（近日未能攔截38及39字頭）。問題已在 0.2.17 版本修復。<br>
+<h4>符合 Google Play 要求</h4>
+<h5>要求（一）：程式內的原生代碼，須支援 64 bit 架構</h5>
+為加快資料庫處理速度，小鴨內置原生（Native）代碼（包括開源的 <a href="https://en.wikipedia.org/wiki/Lightning_Memory-Mapped_Database">lmdb</a> 資料庫引擎）。之前，小鴨一直使用編繹為 32 bit 的版本。為符合 Google Play 要求，一般來說，只須再將該開源庫的原生代碼，以 64 bit 目標架構編繹一次，納入程式便可。<br>
+
+問題是 lmdb 資料庫引擎，其資料庫檔案格式，在 32 bit 版本及 64 bit 版本間是不相容的。因此，64 bit CPU手機的用戶，由 32 bit 版本小鴨升級到 64 bit 版本時，小鴨須先將用戶手機原有 32 bit 資料庫，轉換至 64 bit 格式。<br>
+
+不過，該資料庫引擎並無相關的轉換功能，因此，用戶升級小鴨後在 64 bit 架構下啟動小鴨，小鴨是無法透過以 64 bit 編繹的資料庫引擎，讀回之前 32 bit 引擎寫入的資料。<br>
+
+為免用家升級到使用 64 bit 版本時，失去原有自訂名單等資料，小鴨須研究用<span style="text-decoration: underline;">自己的方法</span>，在偵測到用戶升級到 64 bit 架構時，直接讀取 32 bit 資料庫的原始檔案，抽取資料，再經 lmdb 引擎寫入 64 bit 格式的資料庫。<br>
+
+【N 個月後】<br>
+
+經過 lmdb 源碼及資料庫格式的分析，以及實際嘗試，小鴨成功在 Java 層面，不經 lmdb 引擎而直接讀取 32 bit 資料庫，以進行轉換。轉換程式會在 64 bit CPU手機的用戶，在升級到 0.2.17 版的小鴨幹線時在背景執行。成功執行的話，用戶不會發覺任何異常。<br>
+<blockquote>事實上，0.2.17 版本與上一版本間，最花時間的地方，就是這項用戶不應察覺的轉換工作（多謝 Google）。</blockquote>
+<h5>要求（二）：程式須升級至將編繹目標，訂於 Android 9 或以後</h5>
+對攔截程式的主要影響為，程式在新版本 Android 會因省電及用戶體驗原因，受到更多的背景執行限制，例如更新時間可能延誤，而用戶須設置允許其他程式上繪製權限，才會在來電時彈出視?等。<br>
+
+而在 Android 9 或以上，程式須要求 <code>FOREGROUND_SERVICE</code> 權限，方能在背景工作。<br>
+
+其他內部修訂包括，程式亦在較新的 Android 版本，移除了對某些內部 API 的存取，以免觸發異常、明確要求維持對未加密 HTTP 的存取、以及維持暫時免除 Scoped Storage 的要求（只屬暫時性，日後在 Scoped Storage 強制執行時，小鴨只能存取 SD Card 上專有資料夾的檔案，主要影響儲存及讀取自訂名單的操作）。<br>
+<h4>Samsung Android 10 設置</h4>
+順帶一提，Samsung用戶升級到 Android 10 後須作以下設定，方可確保小鴨運作。<br>
+
+https://www.youtube.com/watch?v=WDMPZyYFvvQ<br>

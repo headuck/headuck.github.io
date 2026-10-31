@@ -1,0 +1,30 @@
+---
+layout: post
+title: "小鴨 @ Android P Preview 1 測試"
+date: 2018-03-08 23:09:22
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 720
+---
+由於 Android P 會收緊對 hidden API 的管制，而 Android 掛線動作只能透過 hidden API 進行（<a href="/2018/01/22/AndroidP電話攔截軟件末日.html">見前文</a>），因此近日 Android P 推出 Preview 後，便立刻下載 emulator 來測試。<br>
+<!--more-->
+<p>結果:</p>
+<img class="size-full wp-image-721 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520519224.png" alt="" width="360" height="640" />
+<p>成功攔截！</p>
+<img class="size-full wp-image-722 aligncenter" src="/assets/uploads/2018/03/Screenshot_1520519298.png" alt="" width="360" height="640" />
+<p>此外，在給予通知存取權後，也可進行接通再掛線。</p>
+不過在 log 出現了幾個系統警告訊息:<br>
+<pre>W/zygote: Accessing hidden method Landroid/telephony/TelephonyManager;-&gt;getITelephony()Lcom/android/internal/telephony/ITelephony; (light greylist, reflection)
+W/zygote: Accessing hidden method Landroid/telephony/TelephonyManager;-&gt;isNetworkRoaming(I)Z (light greylist, reflection)<br>
+W/zygote: Accessing hidden method Landroid/telephony/TelephonyManager;-&gt;getSimOperator(I)Ljava/lang/String; (light greylist, reflection)<br>
+W/zygote: Accessing hidden method Landroid/telephony/SubscriptionManager;-&gt;getActiveSubscriptionIdList()[I (dark greylist, reflection)</pre>
+即是說，程式攔截電話時透過 Reflection 使用了 Android 的數個 hidden API，包括 TelephonyManager 的 getITelephony，isNetworkRoaming 及 getSimOperator，和 SubscriptionManager 的 getActiveSubscriptionIdList。 前三者已被列入"light greylist"內， 而後者則屬"dark greylist"。<br>
+正如 Google 在最近的 <a href="https://android-developers.googleblog.com/2018/02/improving-stability-by-reducing-usage.html">developer blog</a>上所指，<br>
+<blockquote>In the next Android developer preview, you'll be able to run your existing apps and see <strong>warnings when you use a non-SDK interface that will be subject to blacklist or greylist in the final release</strong>. It's always a best practice to make sure your app runs on the developer preview, but you should pay specific attention to the interface compatibility warnings if you are concerned that you may be impacted.</blockquote>
+而在最新的<a href="https://developer.android.com/preview/restrictions-non-sdk-interfaces.html">Developer Preview 文件</a>上<br>
+<blockquote>There are two greylists: The <strong>light greylist</strong> contains methods and fields <strong>which continue to function in Android P</strong>, but to which we do not guarantee access in future versions of the platform. If there is a reason that you cannot implement an alternative strategy to a light-greylisted API, you may file a bug to request reconsideration of the restriction.
+The <strong>dark greylist</strong> contains methods intended to be made <strong>inaccessible in a future Developer Preview release</strong>.</blockquote>
+換句話說，Google尚未在 Android P 版一刀切 blacklist 所有 hidden API，而是分段進行，小鴨用到的 hidden API， 電話攔截用到的只屬 "light greylist"，即（除非 Google 改變主意，否則<strong>）暫時在 Android P 上仍可進行攔截</strong>。<br>
+不過，獲取電話中 Subscription ID list（即雙卡電話來電紀錄中見到的 "SIM識別碼"，多數是個位數字<strong>）</strong>的 API，在 Android P 便要以另行方法代替（這個實際上是有另行方法的，不過較間接）。<br>

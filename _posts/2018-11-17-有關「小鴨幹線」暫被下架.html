@@ -1,0 +1,48 @@
+---
+layout: post
+title: "有關「小鴨幹線」暫被下架"
+date: 2018-11-17 12:03:47
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 839
+---
+<p>小鴨作者分別在11月2日，9日及14日，收到類似以下的通知，指「小鴨幹線」新增，須使用裝置管理員鎖屏權限的攔截後鎖屏功能，違反Google的deceptive device settings changes政策，並即時將「小鴨幹線」下架。</p>
+<!--more-->
+<img class="alignright size-full wp-image-841" src="/assets/uploads/2018/11/InkedScreenshot.jpg" alt="" width="1080" height="1920" />
+該功能須由用戶自行在設定內開啟，開啟掣的位置已附有清楚說明，但Google(bot?)第一次email首先要求在Google Play內加入“This app uses the Device Administrator permission.”字句。<br>
+<blockquote>Hi Developers at Headuck,
+After review, Headuck Call Blocker / Caller ID DEV (HK), com.headuck.headuckblocker.<wbr />dev, has been removed from Google Play because it violates the <strong>deceptive device settings changes</strong> policy.<br>
+You must explain to users why you are requesting the 'android.permission.BIND_<wbr />DEVICE_ADMIN' in your app. Apps must provide accurate disclosure of their functionality and should perform as reasonably expected by the user. Any changes to device settings must be made with the user's knowledge and consent and be easily reversible by the user.<br>
+<strong>Next Steps </strong>
+<ol>
+ 	<li>Read through the <a href="https://play.google.com/about/ip-deception-spam/deceptive-behavior/deceptive-settings/" target="_blank" rel="noopener" data-saferedirecturl="https://www.google.com/url?q=https://play.google.com/about/ip-deception-spam/deceptive-behavior/deceptive-settings/&amp;source=gmail&amp;ust=1542511830294000&amp;usg=AFQjCNHeFuPcAghYLOgDfAwsHxDlgryRtQ">Deceptive Device Settings Changes</a> policy for more details, and make sure your app complies with all policies listed in the <a href="https://play.google.com/about/developer-content-policy.html" target="_blank" rel="noopener" data-saferedirecturl="https://www.google.com/url?q=https://play.google.com/about/developer-content-policy.html&amp;source=gmail&amp;ust=1542511830294000&amp;usg=AFQjCNHzwP19Htzt665l3pQ48KjTH9knCw">Developer Program Policies</a>.</li>
+ 	<li>If you don't need the BIND_DEVICE_ADMIN permission in your app:
+<ul>
+ 	<li>Remove your request for this permission from your app's manifest.</li>
+ 	<li><a href="https://play.google.com/apps/publish" target="_blank" rel="noopener" data-saferedirecturl="https://www.google.com/url?q=https://play.google.com/apps/publish&amp;source=gmail&amp;ust=1542511830294000&amp;usg=AFQjCNGmf7WY9c1l1gt35SMWViHGY192cw">Sign in to your Play Console</a> and submit the modified, policy compliant APK.</li>
+</ul>
+</li>
+ 	<li>Or, if you need the BIND_DEVICE_ADMIN permission in your app:
+<ul>
+ 	<li><span style="color: #ff9900;">Include the following snippet in your app’s store listing description: “This app uses the Device Administrator permission.”</span></li>
+ 	<li>Provide prominent user facing disclosure of this usage before asking the user to enable this permission within your app. Your disclosure must meet each of the following requirements:
+<ul>
+ 	<li>Disclosure must be displayed in normal course of usage of your app. Your users should not be required to navigate into a menu or settings to view disclosure.</li>
+ 	<li>Disclosure must describe the functionality Device Admin permission is enabling for your app. Each <a href="https://developer.android.com/guide/topics/admin/device-admin.html#policies" target="_blank" rel="noopener" data-saferedirecturl="https://www.google.com/url?q=https://developer.android.com/guide/topics/admin/device-admin.html%23policies&amp;source=gmail&amp;ust=1542511830294000&amp;usg=AFQjCNGaBZME3tWeAwVDqWmXGoJazNwyoQ">security policy</a> used with the Device Admin request must be declared in your disclosure, and each policy must be accompanied with justification for the request.</li>
+ 	<li>Disclosure cannot only be placed in your privacy policy, terms of service or end user license agreement (EULA).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+If approved, your app will again be available with all installs, ratings, and reviews intact.<br>
+Regards,<br>
+Nilay<br>
+Google Play Review Team</blockquote>
+這項要求已立即辦妥並重新獲上架。但其後分別2次收到一式一樣(但由不同Reviewer署名及highlight不同段落)的通知，11月9日highlight了"Or, if you need the BIND_DEVICE_ADMIN permission in your app"，意義不明，在修改Google Play字句以致連大細楷都符合“This app uses the Device Administrator permission.”字眼後即重新獲上架。<br>
+<p>但11月14日又再三收到同一email，這次highlight了"Provide prominent user facing disclosure of this usage before asking the user to enable this permission within your app. Your disclosure must meet each of the following requirements"，這段更含糊的字句。目前只能估計是因該選項是在設定之內，不是"normal course of usage"，被認為是有意隱藏(但攔截App大部份人都是設定後就不再理會??)，或解釋還不夠詳盡，如沒有用特定字眼(Google或許已是由AI bot負責監控，這種可能較大)。</p>
+<p>作者多次透過Google developer網頁提交要求希望得到進一步指引，卻只收到似是bot的標準回覆(即重覆該政策一次)或沒有回覆(一如Reddit androiddev常提及的求助無門經驗)，似乎沒有方法接觸到有common sense的真人澄清問題。</p>
+目前，用戶若要使用小鴨，請在<a href="/2016/02/13/小鴨幹線0226-APK下載.html">此頁</a>下載。由於重覆違反政策會被永久刪App，若未能澄清問題，可能只能在blog發放有鎖屏功能的版本，而在Google Play版本則刪去該功能。<br>
+<p>更新: 11月30日已在Google Play 上架移除了鎖屏功能的版本，而在此blog可繼續下載沒有刪減該功能的版本。</p>

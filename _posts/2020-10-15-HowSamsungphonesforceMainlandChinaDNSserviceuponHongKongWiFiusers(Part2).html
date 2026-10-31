@@ -1,0 +1,534 @@
+---
+layout: post
+title: "How Samsung phones force Mainland China DNS service upon Hong Kong WiFi users (Part 2)"
+date: 2020-10-15 08:54:27
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1397
+---
+Following <a href="/2020/10/12/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part1).html">Part 1</a> on forcing Mainland China DNS service upon Hong Kong WiFi users, this part analyzes how the periodic DNS queries on <code>qq.com</code>, as seen by users capturing the DNS queries, are generated from the recent Samsung phones firmware (as at Sept 2020) when WiFi is used.<br>
+<!--more-->
+<blockquote>tl;dr: These queries are sent simultaneously to all DNS servers registered for the WiFi connection, including <code>114.114.114.114</code> when it is added under circumstances as examined in <a href="/2020/10/12/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part1).html">Part 1</a>. They are generated every 20 to 60 seconds (depending on settings and link conditions) when the following pre-conditions are satisfied, i.e. WiFi is connected (except with some known devices) with <code>mCurrentMode</code> not equals 0 (elaborated at the bottom of this article), and when screen is on.  The queries are sent directly using the WiFi connection link, without going through the VPN / private DNS configured, presumably as they are intended for testing the WiFi network.  The IP addresses returned by the queries are not further used, except for checking if they are in a private IP range (in which case the checking is deemed failed).</blockquote>
+The following is a technical (read: very boring) account of the findings. Jump to the end for hints to disable the DNS query for your home WiFi.<br>
+For better illustration of the source, a new Github repository showing the decompiled version of the same <code>wifi-service.jar</code> as in Part I has been created. It uses a different mode of the decompiler (JADX) to attempt to decompile more code to Java, even when there are issues in correctness. The repository is at <a href="https://github.com/headuck/SM-N9750-TGY-1">SM-N9750-TGY-1</a>.<br>
+<h3>The main players</h3>
+The main controlling class for the logic is again under <code>com.android.server.wifi.WifiConnectivityMonitor</code>, in the file <a href="https://github.com/headuck/SM-N9750-TGY-1/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java">WifiConnectivityMonitor.java</a>.<br>
+<p>As briefly mentioned in the last part, this class implements a state machine which represents the status of the WiFi connection being monitored. The states accept messages and respond to them by taking actions and / or transition into another state.</p>
+Separately, a subclass, <code>NetworkStatsAnalyzer</code>, is responsible for the monitoring of the connectivity and signal strength. The analyzer is an Android <code>Handler</code> which consumes messages in an event loop. These messages can be sent by the parent state machine, from within the analyzer itself, or from other subclasses, to control the activities of the analyzer.<br>
+The most relevant messages in our context are defined as follows (unless otherwise specified, the line numbers are those of the <a href="https://github.com/headuck/SM-N9750-TGY-1/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java">WifiConnectivityMonitor.java</a> file in the decompiled code):<br>
+Messages sent to the Analyzer to control the lifecycle of the checking loop (lines 115-117, 254):<br>
+<pre>    private static final int ACTIVITY_CHECK_POLL = 135221;
+    private static final int ACTIVITY_CHECK_START = 135219;<br>
+    private static final int ACTIVITY_CHECK_STOP = 135220;<br>
+     ...<br>
+    private static final int NETWORK_STAT_CHECK_DNS = 135223;<br>
+</pre>
+Messages representing external events sent to the <code>WifiConnectivityMonitor</code> state machine (lines 205-206).<br>
+<pre>    private static final int EVENT_SCREEN_OFF = 135177;
+    private static final int EVENT_SCREEN_ON = 135176;<br>
+</pre>
+<h3>Let the query loop start</h3>
+When the phone screen is turned on, Android will send the <code>android.intent.action.SCREEN_ON</code> intent to the network receiver of this class (line 1149), which will in turn send <code>EVENT_SCREEN_ON</code> to the <code>WifiConnectivityMonitor</code> state machine. If the state is under <code>EvaluatedState</code> [Note 1], the <code>processMessage()</code> method, around line 2138, handles the message (for brevity, some reference to <code>WifiConnectivityMonitor</code> in the code is omitted):<br>
+<pre>    
+case EVENT_SCREEN_ON:  //135176 <br>
+...<br>
+if (mCurrentMode != 0) {<br>
+    sendMessage(obtainMessage(135188 /* CMD_RSSI_FETCH */, mRssiFetchToken, 0) ;<br>
+    if (isValidState() &amp;&amp; getCurrentState() != mLevel2State) {<br>
+        if (mNetworkStatsAnalyzer != null) {<br>
+            mNetworkStatsAnalyzer.sendEmptyMessage(ACTIVITY_CHECK_START); // 135219<br>
+        }<br>
+        startEleCheck();<br>
+    }<br>
+    if (mCurrentMode == 1 || mLinkDetectMode == 1) {<br>
+        sendMessage(obtainMessage(CMD_TRAFFIC_POLL/*135193*/, mTrafficPollToken, 0);<br>
+    }<br>
+}<br>
+...<br>
+</pre>
+This means that, when <code>mCurrentMode</code> is non-zero, WiFi is connected, and the connection is not with some known devices, it will send the <code>ACTIVITY_CHECK_START</code> message to the <code>NetworkStatsAnalyzer</code>. (It will also perform other actions, like calling <code>startEleCheck()</code> to discover devices, but these are not relevant to our context.)<br>
+The message <code>ACTIVITY_CHECK_START</code> is also sent to the <code>NetworkStatsAnalyzer</code> from a few other places. Here is an extract of the <code>enter()</code> method of the <code>Valid</code> state, triggered when <code>WifiConnectivityMonitor</code> enters <code>Valid</code> state (i.e. upon WiFi connection) (line 3077-).<br>
+<pre>if (mCurrentMode != 0) {
+    ...<br>
+    mNetworkStatsAnalyzer.sendEmptyMessage(ACTIVITY_CHECK_START);<br>
+    mNetworkStatsAnalyzer.sendEmptyMessage(NETWORK_STAT_CHECK_DNS);<br>
+}</pre>
+<code>ACTIVITY_CHECK_START</code> is also sent when <code>mCurrentMode</code> switches from 0 to other values under <code>Valid</code> state (line 3112).  Together, it is ensured that all paths arriving at the status, i.e. Wifi is connected, screen is on, and <code>mCurrentMode</code> is non-zero, will trigger <code>ACTIVITY_CHECK_START</code>.
+Note that upon entering the <code>Valid</code> state, <code>NETWORK_STAT_CHECK_DNS</code> is also sent to the <code>NetworkStatsAnalyzer</code>. Let's look at what this message does first.<br>
+<h3>The NetworkStatsAnalyzer</h3>
+<h4>The "loop" structure</h4>
+The below shows a skeleton of the <code>NetworkStatsAnalyzer</code> handler loop handling the above messages, with bodies of <code>ACTIVITY_CHECK_POLL</code> and <code>ACTIVITY_CHECK_STOP</code> omitted for the moment. (lines 4157-, 4477-, 5107-)<br>
+<pre>private class NetworkStatsAnalyzer extends Handler
+{<br>
+    ...<br>
+    private boolean mDnsInterrupted = false;<br>
+    private boolean mDnsQueried = false;<br>
+    private long mLastDnsCheckTime = 0;<br>
+    private boolean mPollingStarted = false;<br>
+    private boolean mPublicDnsCheckProcess = false;<br>
+    private boolean mSkipRemainingDnsResults = false;<br>
+    
+    ...<br>
+    public void handleMessage(Message string) {<br>
+        long now = SystemClock.elapsedRealtime();<br>
+        final long elapsedRealtime = SystemClock.elapsedRealtime();<br>
+        final WifiInfo wifiInfo = WifiConnectivityMonitor.this.syncGetCurrentWifiInfo();<br>
+        final int what = string.what;<br>
+        switch (what) {<br>
+        ...<br>
+            case ACTIVITY_CHECK_START:<br>
+                if (this.mPollingStarted) break;<br>
+                if (WifiConnectivityMonitor.this.isMobileHotspot()) break;<br>
+                if (this.isBackhaulDetectionEnabled()) {<br>
+                    this.sendEmptyMessage(TCP_BACKHAUL_DETECTION_START); // 135226<br>
+                }<br>
+                this.sendEmptyMessage(ACTIVITY_CHECK_POLL);<br>
+                WifiConnectivityMonitor.this.initNetworkStatHistory();<br>
+                this.mLastRssi = wifiInfo.getRssi();<br>
+                this.mPollingStarted = true;<br>
+                break;<br>
+            case ACTIVITY_CHECK_POLL:<br>
+                ...<br>
+                break;<br>
+            case ACTIVITY_CHECK_STOP:<br>
+                ...<br>
+                break;<br>
+            case NETWORK_STAT_CHECK_DNS:<br>
+                if (!WifiConnectivityMonitor.this.isMobileHotspot()) {<br>
+                    checkPublicDns();<br>
+                }<br>
+                break;<br>
+        }<br>
+    }<br>
+}<br>
+</pre>
+The message <code>NETWORK_STAT_CHECK_DNS</code>, sent upon WiFi connection, will invoke the method <code>checkPublicDns()</code> if the WiFi is not a mobile hotspot. The method is as follows (line 4262-).<br>
+<pre>public void checkPublicDns() {
+    if (WifiConnectivityMonitor.this.inChinaNetwork()) {<br>
+        mPublicDnsCheckProcess = false;<br>
+        return;<br>
+    }<br>
+    mPublicDnsCheckProcess = true;<br>
+    mNsaQcStep = 1;<br>
+    WifiConnectivityMonitor wifiConnectivityMonitor = WifiConnectivityMonitor.this;<br>
+    String str = wifiConnectivityMonitor.mParam.DEFAULT_URL_STRING;<br>
+    DnsThread mDnsThread = new DnsThread(true, str, this, 10000);<br>
+    mDnsThread.start();<br>
+    WifiConnectivityMonitor.this.mDnsThreadID = mDnsThread.getId();<br>
+    if (WifiConnectivityMonitor.DBG) {<br>
+        Log.d(TAG, "wait publicDnsThread results [" + WifiConnectivityMonitor.this.mDnsThreadID + "]");<br>
+    }<br>
+}</pre>
+We see the problematic <code>inChinaNetwork()</code> method as discussed in Part I being used. It can be seen that the above code handles the "normal" case outside China. Upon WiFi connection, it will start an asynchronous DNS query in a separate thread called <code>DnsThread</code>, using the address in the constant <code>DEFAULT_URL_STRING</code> (hardcoded to "www.google.com" as shown in Part I). This is done once at the start of every WiFi connection. However, if <code>inChinaNetwork()</code> returns true, e.g. in the case of a phone in Hong Kong, it would just set the flag <code>mPublicDnsCheckProcess</code> to false and return, skipping the DNS query for google.<br>
+Then we look at <code>ACTIVITY_CHECK_START</code>. On receipt of <code>ACTIVITY_CHECK_START</code>, the <code>NetworkStatsAnalyzer</code>, among other actions, sends the <code>ACTIVITY_CHECK_POLL</code> message to itself, and sets the flag <code>mPollingStarted</code> to true. This would kick start the checking loop, as to be explained below. Before taking these actions, it would ensure that the loop is not already started by checking <code>mPollingStarted</code>, and that the WiFi connection is not acting as a hotspot.<br>
+The main flow controlling logic of the body of <code>ACTIVITY_CHECK_POLL</code> polling loop is as follows (line 4509-).<br>
+<pre>case ACTIVITY_CHECK_POLL:
+if (WifiConnectivityMonitor.this.SMARTCM_DBG) {<br>
+    Log.i(TAG, "mPollingStarted : " + mPollingStarted);    <br>
+}<br>
+if (!mPollingStarted) {<br>
+    break;<br>
+}<br>
+if ((WifiConnectivityMonitor.this.mCurrentBssid != null) &amp;&amp;<br>
+    (WifiConnectivityMonitor.this.mCurrentBssid != WifiConnectivityMonitor.this.mEmptyBssid)) {<br>
+    WifiConnectivityMonitor.this.mIWCChannel.sendMessage(CMD_IWC_ACTIVITY_CHECK_POLL); // 135376<br>
+    int rssi2 = wifiInfo.getRssi();<br>
+    if (rssi2 &lt; -90) {<br>
+        if (!WifiConnectivityMonitor.this.mClientModeImpl.isConnected()) {<br>
+            Log.i(TAG, "already disconnected : " + rssi2);<br>
+            removeMessages(ACTIVITY_CHECK_POLL);<br>
+            sendEmptyMessage(ACTIVITY_CHECK_STOP);<br>
+            break;<br>
+        }<br>
+        if (rssi2 &lt; -95) {<br>
+            if (rssi2 == -127) break;<br>
+            rssi2 = -95;<br>
+        }<br>
+    }<br>
+    /*<br>
+     * Checking body omitted for the time being<br>
+     */<br>
+    removeMessages(ACTIVITY_CHECK_POLL);<br>
+    sendEmptyMessageDelayed(ACTIVITY_CHECK_POLL, 1000L);<br>
+    ...<br>
+    break;<br>
+}<br>
+Log.e(TAG, "currentBssid is null.");<br>
+this.removeMessages(ACTIVITY_CHECK_POLL);<br>
+this.sendEmptyMessage(ACTIVITY_CHECK_STOP);<br>
+break;<br>
+</pre>
+The code above ensures that the <code>mPollingStarted</code> flag remains on and WiFi remains connected (by checking if BSSID is empty, or signal is weak and status returned from <code>ClientModeImpl</code> indicates disconnection), before proceeding with various checking (details below).<br>
+After each run of the checking code, it resends the <code>ACTIVITY_CHECK_POLL</code> message to itself with a delay of 1000 ms (i.e. 1 second), essentially forming a loop running once per second. In other words, Samsung phones keep running this checking loop, which is not found on standard Android phones, once every second when both screen and WiFi is on! (Furthermore, it also runs another similar loop for "backhaul detection” if <code>mCurrentMode</code> &gt;= 2, not covered here).<br>
+On the other hand, if WiFi has been disconnected, the loop will terminate - <code>ACTIVITY_CHECK_POLL</code> is not sent again, and instead <code>ACTIVITY_CHECK_STOP</code> is sent to itself.<br>
+For completeness, here is the body of code handling the <code>ACTIVITY_CHECK_STOP</code> message (line 4492-):<br>
+<pre>case ACTIVITY_CHECK_STOP:
+removeMessages(ACTIVITY_CHECK_POLL);<br>
+removeMessages(TCP_BACKHAUL_DETECTION_START); // 135226<br>
+mPollingStarted = false;<br>
+mPublicDnsCheckProcess = false;<br>
+...<br>
+mDnsQueried = false;<br>
+mDnsInterrupted = false;<br>
+...<br>
+break;<br>
+</pre>
+The above code removes any pending <code>ACTIVITY_CHECK_POLL</code> messages and resets the <code>mPollingStarted</code> flag and other flags.<br>
+<h4>The main checking - preconditions</h4>
+Back to the main checking body omitted above, after doing some statistics concerning packet throughput and signal strength (not covered here), the code checks for the need to do a DNS query test (line 4618-, please note that the decompiled code has some issues in expanding the nested structure. The code extract below has corrected the issue).<br>
+<pre>if (!WifiConnectivityMonitor.this.mIsScanning &amp;&amp; !WifiConnectivityMonitor.this.mIsInRoamSession
+        &amp;&amp; !WifiConnectivityMonitor.this.mIsInDhcpSession &amp;&amp; WifiConnectivityMonitor.this.mIsScreenOn)<br>
+{<br>
+    if (!this.mPublicDnsCheckProcess &amp;&amp; WifiConnectivityMonitor.this.mCurrentMode != 0){<br>
+        if (this.mDnsQueried) { // If DNS query is ongoing<br>
+            ....<br>
+            if (WifiConnectivityMonitor.SMARTCM_DBG) {<br>
+                Log.i(TAG, "waiting dns responses or the quality result now!");<br>
+            }<br>
+            boolean stopQC = false;<br>
+            if (WifiConnectivityMonitor.this.mCurrentMode == 3) {<br>
+                if (WifiConnectivityMonitor.this.mInAggGoodStateNow) {<br>
+                    stopQC = true;<br>
+                }<br>
+            } else if (diffRx &gt;= ((long) WifiConnectivityMonitor.this.mParam.mGoodRxPacketsBase) &amp;&amp; rxBytesPerPacket &gt; 500) {<br>
+                stopQC = true;<br>
+            } else if (diffTxBytes &gt;= 100000) {<br>
+                stopQC = true;<br>
+            }<br>
+            if (stopQC) {<br>
+                if (WifiConnectivityMonitor.SMARTCM_DBG) {<br>
+                    Log.i(TAG, "Good Rx!, don't need to keep evaluating quality!");<br>
+                }<br>
+                if (mDnsQueried) {<br>
+                    mSkipRemainingDnsResults = true;<br>
+                    mDnsQueried = false;<br>
+                    mDnsInterrupted = false;<br>
+                }<br>
+            }<br>
+        } else {<br>
+            /* <br>
+             * Further code to check DNS, see below<br>
+             */<br>
+        }<br>
+    }<br>
+}</pre>
+We see some further preconditions for performing the DNS query test here:<br>
+<ul>
+ 	<li>WiFi scanning is not in progress;</li>
+ 	<li>WiFi roaming is not in progress;</li>
+ 	<li>DHCP query is not in progress;</li>
+ 	<li>Screen is turned on;</li>
+ 	<li><code>mPublicDnsCheckProcess</code> is false, i.e. not doing the initial network check above; and</li>
+ 	<li><code>mCurrentMode</code> != 0</li>
+</ul>
+The first 3 conditions is for avoiding the DNS query under some transient conditions when the network may change. Item 5 avoids doing the initial check and the periodic check at the same time. Other conditions are for revalidation of the conditions.<br>
+In addition, if <code>mDnsQueried</code> is true, the previous DNS query is still ongoing, and a new query will not be considered.<br>
+Instead, if it is determined that the connection is in a good state (using several metrics which are not elaborated here), it will set the flag <code>mSkipRemainingDnsResults</code> to true. From a literal reading of the log messages and variable names, it seems that the intention is to perform DNS query only once if the network is in good condition. However, it is noted that nothing in the code actually reads the <code>mSkipRemainingDnsResults</code> flag! The DNS checking queries would continue to be issued in the loop, even when the connection is good and stable. It is not known whether this is a bug, or is deliberate despite the comments, say, due to a subsequent design change.<br>
+<h4>The core checking section</h4>
+The core part of the checking loop is as follows (lines 4720-, 4896-)<br>
+<pre>if (WifiConnectivityMonitor.this.mCurrentMode != 3 || !WifiConnectivityMonitor.this.mInAggGoodStateNow) {
+    if (diffRx &gt; 0 || diffTx &gt; 0) {<br>
+        if (now - mLastDnsCheckTime &gt; ((long) (WifiConnectivityMonitor.this.mCurrentMode == 3 ? 30000 : 60000))) {<br>
+            if (WifiConnectivityMonitor.SMARTCM_DBG) {<br>
+                Log.d(TAG, "PERIODIC DNS CHECK TRIGGER (SIMPLE CONNECTION TEST) - Last DNS check was " +<br>
+                        ((now4 - mLastDnsCheckTime) / 1000) + " seconds ago.");<br>
+            }<br>
+            mNsaQcTrigger = 44;<br>
+            needCheckInternetIsAlive = true;<br>
+        }<br>
+    }<br>
+// Other conditions setting the flag needCheckInternetIsAlive;<br>
+    
+    if (needCheckInternetIsAlive) {<br>
+        if (now - mLastDnsCheckTime &gt;= 20000) {<br>
+            mCumulativePoorRx.clear();<br>
+            mSkipRemainingDnsResults = false;<br>
+            mDnsQueried = true;<br>
+            mNsaQcStep = 1;<br>
+            int timeoutMS = 10000;<br>
+            if (WifiConnectivityMonitor.this.mCurrentMode == 3) {<br>
+                timeoutMS = 5000;<br>
+            }<br>
+            String dnsTargetUrl2 = WifiConnectivityMonitor.this.mParam.DEFAULT_URL_STRING;<br>
+            if (WifiConnectivityMonitor.this.inChinaNetwork()) {<br>
+                dnsTargetUrl = "www.qq.com";<br>
+            } else {<br>
+                dnsTargetUrl = dnsTargetUrl2;<br>
+            }<br>
+            DnsThread mDnsThread = new DnsThread(true, dnsTargetUrl, this, (long) timeoutMS);<br>
+            mDnsThread.start();<br>
+            mLastDnsCheckTime = now;<br>
+            WifiConnectivityMonitor.this.mDnsThreadID = mDnsThread.getId();<br>
+            if (WifiConnectivityMonitor.DBG) {<br>
+                Log.d(TAG, "wait needCheck DnsThread results [" + WifiConnectivityMonitor.this.mDnsThreadID + "]");<br>
+            }<br>
+        }<br>
+    }<br>
+}</pre>
+The first part determines the "minimum" frequency to query the DNS on <code>qq.com</code>, so long as there are any WiFi activities. It would set the flag <code>needCheckInternetIsAlive</code> to true if it is more than 60 seconds since the last DNS check normally, but if <code>mCurrentMode == 3</code> which means "Aggressive WiFi to cellular handover" mode (i.e. requiring a high WiFi quality or else switch to mobile data, thus needs more aggressive checks), it would shorten the interval to 30 seconds. (But in Aggressive mode, this would only be triggered if connection is not in "good" state defined for Aggressive mode). Remember that this loop is run once per second when the screen is on, which means that the checking would be run approximately every 60 (or 30) seconds, by setting the <code>needCheckInternetIsAlive</code> flag to indicate that a check is needed.<br>
+There are some more criteria for switching on the <code>needCheckInternetIsAlive</code> flag in the subsequent code (omitted), based on network metrics gathered. The effect is to increase checking when a poor status of the WiFi network is detected. This might increase the frequency of DNS to <code>qq.com</code> in some cases. But the frequency is limited to at most once per 20 seconds by a later checking.<br>
+Finally, the code sets <code>dnsTargetUrl</code> to <code>www.qq.com</code> (assuming <code>inChinaNetwork()</code> is true in our context. Otherwise it would query for <code>DEFAULT_URL_STRING</code>, i.e. google), and performs the query asynchronously using the <code>DnsThread</code> class, as with the "normal" case under <code>checkPublicDns()</code>. It also records the current time for future calculation of time lapsed.<br>
+<h4>Drilling into DnsThread</h4>
+Here is an extract of the <code>DnsThread</code> class. (Only the case <code>mForce == true</code> under <code>run()</code> is shown) (line 6855-)<br>
+<pre>public final class DnsThread extends Thread {
+    ...<br>
+    private final CountDownLatch latch = new CountDownLatch(1);<br>
+<p>public DnsThread(boolean force, String url, Handler handler, long timeout) {
+        mCallBackHandler = handler;<br>
+        if (timeout &gt;= 1000) {<br>
+            mTimeout = timeout;<br>
+        }<br>
+        mForce = force;<br>
+        mUrl = url;<br>
+    }</p>
+public void run() {<br>
+        WifiConnectivityMonitor.this.mAnalyticsDisconnectReason = 0;<br>
+        if (mForce) {<br>
+            HandlerThread dnsPingerThread = new HandlerThread("dnsPingerThread");<br>
+            dnsPingerThread.start();<br>
+            try {<br>
+                mDnsPingerHandler = new DnsPingerHandler(dnsPingerThread.getLooper(), mCallBackHandler, getId());<br>
+                mDnsPingerHandler.sendDnsPing(this.mUrl, this.mTimeout);<br>
+                if (!latch.await(mTimeout, TimeUnit.MILLISECONDS)) {<br>
+                    if (WifiConnectivityMonitor.DBG) {<br>
+                        Log.d(TAG, "DNS_CHECK_TIMEOUT [" + getId() + "-F] - latch timeout");<br>
+                    }<br>
+                    mCallBackHandler.sendMessage(WifiConnectivityMonitor.this.obtainMessage(WifiConnectivityMonitor.RESULT_DNS_CHECK, 3, -1, null));<br>
+                } else {<br>
+                    mCallBackHandler.sendMessage(WifiConnectivityMonitor.this.obtainMessage(WifiConnectivityMonitor.RESULT_DNS_CHECK, mForcedCheckResult, mForcedCheckRtt, mForcedCheckAddress));<br>
+                }<br>
+            } catch (Exception e) {<br>
+                if (WifiConnectivityMonitor.DBG) {<br>
+                    Log.d(TAG, "DNS_CHECK_TIMEOUT [" + getId() + "-F] " + e);<br>
+                }<br>
+                mCallBackHandler.sendMessage(WifiConnectivityMonitor.this.obtainMessage(WifiConnectivityMonitor.RESULT_DNS_CHECK, 3, -1, null));<br>
+            }<br>
+        } else {<br>
+        ...<br>
+        }<br>
+    }<br>
+}</pre>
+Essentially, when the <code>run()</code> method of <code>DnsThread</code> is called, it creates an Android <code>HandlerThread</code>, uses its looper to create a new <code>DnsPingerHandler</code>, and calls <code>sendDnsPing()</code> of the <code>DnsPingerHandler</code> to ask it to perform the DNS query. It then waits for the query to complete on this thread using a <code>CountDownLatch</code> with the required timeout, and returns the result via the <code>RESULT_DNS_CHECK</code> message.<br>
+The relevant code under <code>DnsPingerHandler</code>(line 7087-):<br>
+<pre>private class DnsPingerHandler extends Handler {
+    Handler mCallbackHandler;<br>
+    private DnsCheck mDnsPingerCheck;<br>
+    long mId;<br>
+<p>public DnsPingerHandler(Looper looper, Handler callbackHandler, long id) {
+        super(looper);<br>
+        mDnsPingerCheck = new DnsCheck(this, "WifiConnectivityMonitor.DnsPingerHandler");<br>
+        mCallbackHandler = callbackHandler;<br>
+        mId = id;<br>
+    }</p>
+public void sendDnsPing(String url, long timeout) {<br>
+        if (!mDnsPingerCheck.requestDnsQuerying(1, (int) timeout, url)) {<br>
+            if (WifiConnectivityMonitor.DBG) {<br>
+                Log.e(DnsThread.TAG, "DNS List is empty, need to check quality");<br>
+            }<br>
+            if (DnsThread.this.mCallBackHandler != null) {<br>
+                DnsThread.this.mCallBackHandler.sendMessage(obtainMessage(WifiConnectivityMonitor.RESULT_DNS_CHECK, 3, -1, null));<br>
+                DnsThread.this.latch.countDown();<br>
+            }<br>
+        }<br>
+    }<br>
+}</pre>
+<code>DnsPingerHandler</code> in turn calls <code>requestDnsQuerying()</code> of the class <code>DnsCheck</code>. The method <code>requestDnsQuerying()</code> under <code>DnsCheck</code> class is listed below. (line 7150-)
+<pre>public class DnsCheck {
+    private List mDnsServerList = null;<br>
+    private List mDnsList;<br>
+    private DnsPinger mDnsPinger;<br>
+    private HashMap&lt;Integer, Integer&gt; mIdDnsMap = new HashMap&lt;&gt;();<br>
+<p>public DnsCheck(Handler handler, String tag) {
+        mDnsPinger = new DnsPinger(WifiConnectivityMonitor.this.mContext, tag, handler.getLooper(), handler, 1);<br>
+        mDnsCheckTAG = tag;<br>
+        mDnsPinger.setCurrentLinkProperties(WifiConnectivityMonitor.this.mLinkProperties);<br>
+    }</p>
+public boolean requestDnsQuerying(int num, int timeoutMS, String url) {<br>
+        List dnses;<br>
+        boolean requested = false;<br>
+        mDnsList = new ArrayList();<br>
+        if (!(WifiConnectivityMonitor.this.mLinkProperties == null || (dnses = WifiConnectivityMonitor.this.mLinkProperties.getDnsServers()) == null || dnses.size() == 0)) {<br>
+            mDnsServerList = new ArrayList(dnses);<br>
+        }<br>
+        List dnses2 = mDnsServerList;<br>
+        if (dnses2 != null) {<br>
+            mDnsList.addAll(dnses2);<br>
+        }<br>
+        int numDnses = mDnsList.size();<br>
+        
+        ...<br>
+        mIdDnsMap.clear();<br>
+        for (int i2 = 0; i2 &lt; num; i2++) {<br>
+            for (int j = 0; j &lt; numDnses; j++) {<br>
+                try {<br>
+                    if (mDnsList.get(j) == null || mDnsList.get(j).isLoopbackAddress()) {<br>
+                        Log.d(DnsThread.TAG, "Loopback address (::1) is detected at DNS" + j);<br>
+                    } else {<br>
+                        if (url == null) {<br>
+                            mIdDnsMap.put(Integer.valueOf(mDnsPinger.pingDnsAsync(mDnsList.get(j), timeoutMS, (i2 * 0) + 100)), Integer.valueOf(j));<br>
+                        } else {<br>
+                            mIdDnsMap.put(Integer.valueOf(mDnsPinger.pingDnsAsyncSpecificForce(mDnsList.get(j), timeoutMS, (i2 * 0) + 100, url)), Integer.valueOf(j));<br>
+                        }<br>
+                        requested = true;<br>
+                    }<br>
+                } catch (IndexOutOfBoundsException e2) {<br>
+                    if (WifiConnectivityMonitor.DBG) {<br>
+                        Log.i(DnsThread.TAG, "IndexOutOfBoundsException");<br>
+                    }<br>
+                }<br>
+            }<br>
+        }<br>
+        if (WifiConnectivityMonitor.SMARTCM_DBG) {<br>
+            Log.i(DnsThread.TAG, "[REQUEST] " + this.mDnsCheckTAG + " : " + this.mIdDnsMap);<br>
+        }<br>
+        return requested;<br>
+    }<br>
+}</pre>
+This retrieves all the DNS servers configured for the connection from <code>LinkProperties</code> (a standard Android class). Then it loops through ALL DNS servers, calls the method <code>pingDnsAsyncSpecificForce(this.mDnsList.get(j), timeoutMS, (i2 * 0) + 100, url)</code> for each of them. The method is "asynchronous" as it sends a message within the <code>DnsPinger</code> class and immediately returns. In other words, DNS queries for the url are sent simutaneously to all DNS servers configured.<br>
+The method <code>pingDnsAsyncSpecificForce()</code> of class <code>DnsPinger</code> is located under a separate Java file, <a href="https://github.com/headuck/SM-N9750-TGY-1/blob/main/com/android/server/wifi/DnsPinger.java">DnsPinger.java</a>. It performs the actual DNS query with UDP. We are not going into its details here, but it is notable that in the constructor of <code>DnsCheck</code>, it is provided with a specific WiFi connection by using <code>DnsPinger.setCurrentLinkProperties()</code>, and it will send its DNS query directly to the Wifi interface. In other words these DNS queries will disregard the VPN or private DNS settings in the mobile device.<br>
+<h4>The checking results</h4>
+Since the process is asynchronous, after <code>DnsPinger</code> finished its job (result of DNS obtained or error occurred), it will send the result using the message <code>DNS_PING_RESULT_SPECIFIC</code> (593925). The result sent back is mainly the time needed for the DNS query, or an error code in case of error.  If a private network address is returned, it would be treated as an error (value = 2) [2].<br>
+The <code>DNS_PING_RESULT_SPECIFIC</code> is handled by handleMessage of <code>DnsPingerHandler</code> (line 7087-):<br>
+<pre>if (WifiConnectivityMonitor.SMARTCM_DBG) {
+    Log.i(DnsThread.TAG, "[DNS_PING_RESULT_SPECIFIC]");<br>
+}<br>
+DnsCheck dnsCheck = mDnsPingerCheck;<br>
+if (dnsCheck != null) {<br>
+    try {<br>
+        int dnsResult = dnsCheck.checkDnsResult(msg.arg1, msg.arg2, 1);<br>
+        if (dnsResult != 10) {<br>
+            if (WifiConnectivityMonitor.DBG) {<br>
+                Log.d(DnsThread.TAG, "send DNS CHECK Result [" + this.mId + "]");<br>
+            }<br>
+            DnsThread.this.mForcedCheckResult = dnsResult;<br>
+            DnsThread.this.mForcedCheckRtt = msg.arg2;<br>
+            DnsThread.this.mForcedCheckAddress = (InetAddress) msg.obj;<br>
+            DnsThread.this.latch.countDown();<br>
+        } else if (WifiConnectivityMonitor.SMARTCM_DBG) {<br>
+            Log.d(DnsThread.TAG, "wait until the responses about remained DNS Request arrive!");<br>
+        }<br>
+    } catch (NullPointerException ne) {<br>
+        Log.e(DnsThread.TAG, "DnsPingerHandler - " + ne);<br>
+    }<br>
+}</pre>
+The error conditions are checked by <code>DnsCheck.checkDnsResult()</code> (not elaborated here). It is notable that the result of the DNS query (i.e. the IP address of <code>qq.com</code>）is not actually used, besides the validity check (to ensure that it is not a private IP address) under <code>DnsPinger</code> above. Finally it issues <code>countDown()</code> to the <code>CountDownLatch</code> under <code>DnsThread</code>, releasing the <code>CountDownLatch</code> there as mentioned above. This would in normal cases cause <code>DnsThread</code> to send a <code>RESULT_DNS_CHECK</code> message, with the test results, back to the <code>NetworkStatsAnalyzer</code>.<br>
+The part of <code>NetworkStatsAnalyzer</code> handling the message is as follows (line 4426-):<br>
+<pre>case RESULT_DNS_CHECK:
+int mDnsResult = WifiConnectivityMonitor.this.checkDnsThreadResult(message.arg1, message.arg2);<br>
+mDnsQueried = false;<br>
+if (mDnsInterrupted) {<br>
+    this.mDnsInterrupted = false;<br>
+    if (WifiConnectivityMonitor.DBG) {<br>
+        Log.d(TAG, "Result: " + mDnsResult + " - This DNS query is interrupted.");<br>
+    }<br>
+} else if (WifiConnectivityMonitor.this.mIsInDhcpSession || WifiConnectivityMonitor.this.mIsScanning || WifiConnectivityMonitor.this.mIsInRoamSession) {<br>
+    if (WifiConnectivityMonitor.DBG) {<br>
+        Log.d(TAG, "Result: " + mDnsResult + " - This DNS query is interrupted by DHCP session or Scanning.");<br>
+    }<br>
+} else if (mDnsResult != 0) {<br>
+    if (WifiConnectivityMonitor.DBG) {<br>
+        Log.e(TAG, "single DNS Checking FAILURE");<br>
+    }<br>
+    if (WifiConnectivityMonitor.this.mCurrentMode != 3 || !WifiConnectivityMonitor.this.mInAggGoodStateNow) {<br>
+        ...<br>
+    } else {<br>
+        if (WifiConnectivityMonitor.DBG) {<br>
+            Log.e(TAG, "But, do not check the quality in AGG good rx state");<br>
+        }<br>
+        mSkipRemainingDnsResults = true;<br>
+    }<br>
+}<br>
+mPublicDnsCheckProcess = false;<br>
+break;</pre>
+Processing of the results is mainly done under <code>checkDnsThreadResult()</code>, which ultimately leads to <code>BssidStatistics.updateBssidLatestDnsResultType()</code> to record the result for the connection (line 8021). Afterwards, it housekeeps the relevant flags (<code>mDnsQueried</code> etc). It also sets the useless <code>mSkipRemainingDnsResults</code> flag. (This part also handles the "normal" <code>checkPublicDns()</code> query and thus also clears the <code>mPublicDnsCheckProcess</code> flag).<br>
+<h3>Ending the DNS queries loop</h3>
+Finally, back to the top level state machine. When the screen turns off, the <code>EvaluatedState</code> would stop the loop by sending <code>ACTIVITY_CHECK_STOP</code> to the <code>NetworkStatsAnalyzer</code> (line 2177-).<br>
+<pre>case EVENT_SCREEN_OFF:
+...<br>
+screenOffEleInitialize();<br>
+removeMessages(WifiConnectivityMonitor.CMD_RSSI_FETCH);<br>
+removeMessages(WifiConnectivityMonitor.CMD_TRAFFIC_POLL);<br>
+mRssiFetchToken++;<br>
+if (WifiConnectivityMonitor.this.mNetworkStatsAnalyzer == null) {<br>
+    break;<br>
+}<br>
+mNetworkStatsAnalyzer.sendEmptyMessage(WifiConnectivityMonitor.ACTIVITY_CHECK_STOP);<br>
+break;</pre>
+<h3>The Current Mode flag (or how trick the Phone to stop the extra DNS checking)</h3>
+All along we see the reference to <code>mCurrentMode</code>, which when set to 0 would disable the DNS checking. This is set by the <code>determineMode()</code> method (line 3614-):<br>
+<pre>private void determineMode() {
+    int i;<br>
+    String ssid = mWifiInfo.getSSID();<br>
+    if (mCurrentMode != 0) {<br>
+        if (isIgnorableNetwork(ssid)) {<br>
+            setCurrentMode(0);<br>
+        } else if (!mPoorNetworkDetectionEnabled) {<br>
+            setCurrentMode(1);<br>
+        } else if (isQCExceptionOnly()) {<br>
+            if (SMARTCM_DBG) {<br>
+                logi("isQCExceptionOnly");<br>
+            }<br>
+            setCurrentMode(1);<br>
+        } else if (isAggressiveModeEnabled()) {<br>
+            if (SMARTCM_DBG) {<br>
+                logi("mAggressiveModeEnabled");<br>
+            }<br>
+            setCurrentMode(3);<br>
+        } else {<br>
+            setCurrentMode(2);<br>
+        }<br>
+    }<br>
+    ...<br>
+}</pre>
+A look at <code>isIgnorableNetwork()</code> would therefore provide hints on how to disable the DNS checking loop (line 9611-):<br>
+<pre>public boolean isIgnorableNetwork(String _ssid) {
+    int reason = -1;<br>
+    String ssid = null;<br>
+    int networkId = -1;<br>
+    WifiInfo wifiInfo = this.mWifiInfo;<br>
+    if (wifiInfo != null &amp;&amp; _ssid == null) {<br>
+        ssid = wifiInfo.getSSID();<br>
+        networkId = this.mWifiInfo.getNetworkId();<br>
+    }<br>
+    if (ssid == null &amp;&amp; _ssid != null) {<br>
+        ssid = _ssid;<br>
+    }<br>
+    WifiConfiguration wifiConfiguration = null;<br>
+    if (networkId != -1) {<br>
+        wifiConfiguration = getWifiConfiguration(networkId);<br>
+    }<br>
+    if ("ATT".equals(SemCscFeature.getInstance().getString(CscFeatureTagWifi.TAG_CSCFEATURE_WIFI_CAPTIVEPORTALEXCEPTION)) &amp;&amp; isPackageRunning(this.mContext, "com.synchronoss.dcs.att.r2g")) {<br>
+        reason = 1;<br>
+    } else if (ssid != null &amp;&amp; ssid.contains("DIRECT-") &amp;&amp; ssid.contains(":NEX-")) {<br>
+        reason = 2;<br>
+    } else if (isPackageRunning(this.mContext, "de.telekom.hotspotlogin")) {<br>
+        reason = 3;<br>
+    } else if (isPackageRunning(this.mContext, "com.belgacom.fon")) {<br>
+        reason = 4;<br>
+    } else if ("CHM".equals(SemCscFeature.getInstance().getString(CscFeatureTagWifi.TAG_CSCFEATURE_WIFI_CAPTIVEPORTALEXCEPTION)) &amp;&amp; (isPackageRunning(this.mContext, "com.chinamobile.cmccwifi") || isPackageRunning(this.mContext, "com.chinamobile.cmccwifi.WelcomeActivity") || isPackageRunning(this.mContext, "com.chinamobile.cmccwifi.MainActivity") || isPackageRunning(this.mContext, "com.android.settings.wifi.CMCCChargeWarningDialog"))) {<br>
+        reason = 6;<br>
+    } else if (("\"au_Wi-Fi\"".equals(ssid) || "\"Wi2\"".equals(ssid) || "\"Wi2premium\"".equals(ssid) || "\"Wi2premium_club\"".equals(ssid) || "\"UQ_Wi-Fi\"".equals(ssid) || "\"wifi_square\"".equals(ssid)) &amp;&amp; (isPackageExists("com.kddi.android.au_wifi_connect") || isPackageExists("com.kddi.android.au_wifi_connect2"))) {<br>
+        reason = 7;<br>
+    } else if (FactoryTest.isFactoryBinary()) {<br>
+        reason = 8;<br>
+    } else if ("\"mailsky\"".equals(ssid) &amp;&amp; this.mIsUsingProxy) {<br>
+        reason = 9;<br>
+    } else if ("\"COPconnect\"".equals(ssid) &amp;&amp; wifiConfiguration.allowedKeyManagement.get(2)) {<br>
+        reason = 10;<br>
+    } else if ("\"SpirentATTEVSAP\"".equals(ssid)) {<br>
+        reason = 11;<br>
+    }<br>
+    if (reason == -1) {<br>
+        return false;<br>
+    }<br>
+    Log.d(TAG, "isIgnorableNetwork - No need to check connectivity: " + ssid + ", reason: " + reason);<br>
+    return true;<br>
+}</pre>
+Presumably, these are hardcoded rules looking for signs that the network is not connected to the Internet (e.g. captive portal), and thus there is no need to check for connectivity.  Among the criteria above, the most practical method to cause a WiFi network to be excluded from DNS checking (i.e. making the method to return true) is to <strong>set the SSID to contain both strings <code>DIRECT-</code> and <code>:NEX-</code>, e.g. <code>DIRECT-:NEX-Home</code></strong> [3].<br>
+(<span style="text-decoration: underline;">Update on 17/10/2020</span>: It was found that, for Samsung phones sold in Hong Kong or phones connected to Hong Kong network (as well as Macau / Mainland network), the Samsung firmware may initiate DNS queries for, <span style="text-decoration: underline;">as well as connections with</span>, the Mainland websites <code>http://www.qq.com</code>, <code>http://www.baidu.com</code>, <code>http://m.taobao.com</code> and <code>http://m.hao123.com</code>, and the regular connectivity check changed to <code>http://connectivity.samsung.com.cn/generate_204</code> instead of the default google site, as part of captive portal detection separately. The DNS loop above may trigger such detection.  Details will be discussed in <a href="/2020/10/23/HowSamsungdevicesconnectWiFiusersinHongKongandpossiblyWorldwidetoTencent,Baidu,TaobaoandHao123.html">Part 3</a>.)<br>
+<hr />
+[1] The state machine for <code>WifiConnectivityMonitor</code> is hierarchial. <code>Evaluated</code> state covers invalid and valid connected state, and <code>Valid</code> state covers several states including <code>Level1</code> and <code>Level2</code>. It appears that <code>Level2</code> state corresponds to some state where the WiFi connection is with some devices (e.g. pedometer) and thus network connectivity checking is not needed.<br>
+[2] This is determined by <code>isDnsResponsePrivateAddress()</code> of <code>DnsPinger</code>.<br>
+[3] The method <code>isPackageRunning()</code> tests for the Apps running as the foreground activity, not just for the existence of the package. So making a package named <code>com.belgacom.fon</code> and installing it on the device has no effect.<br>

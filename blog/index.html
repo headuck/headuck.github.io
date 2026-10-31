@@ -1,0 +1,47 @@
+---
+layout: default
+title: "網誌文章"
+---
+
+<ul style="list-style: none; padding-left: 0; margin: 0; line-height: 1.8;">
+  {% for post in paginator.posts %}
+    {% unless post.categories contains "pages" %}
+      <li style="margin-bottom: 30px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); padding-bottom: 20px;">
+        <span style="color: #abb8c3; font-size: 0.85em; display: block; margin-bottom: 6px;">{{ post.date | date: "%Y年%m月%d日" }}</span>
+
+        <a href="{{ post.url | relative_url }}" style="text-decoration: none; color: var(--wp--preset--color--vivid-amber); font-weight: bold; font-size: 1.15em; display: inline-block;">{{ post.title }}</a>
+        {% if post.excerpt %}
+          <div style="font-size: 0.95em; color: #ffffff; margin-top: 8px; line-height: 1.6;">
+            {{ post.excerpt | strip_html | truncate: 140 }}
+          </div>
+        {% endif %}
+      </li>
+    {% endunless %}
+  {% endfor %}
+</ul>
+
+<!-- 底部鮮黃色數字分頁切換按鈕區 -->
+{% if paginator.total_pages > 1 %}
+  <nav style="text-align: center; margin-top: 50px; margin-bottom: 20px;">
+    <div style="display: inline-flex; gap: 8px; font-family: sans-serif;">
+      {% if paginator.previous_page %}
+        <a href="{{ paginator.previous_page_path | relative_url }}" style="padding: 8px 14px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; text-decoration: none; color: #e5e6e7; font-size: 0.9em;">&laquo; 上一頁</a>
+      {% endif %}
+      {% for page in (1..paginator.total_pages) %}
+        {% if page == paginator.page %}
+          <span style="padding: 8px 14px; background: #fcb900; color: #1c1d1f; border: 1px solid #fcb900; border-radius: 4px; font-weight: bold; font-size: 0.9em;">{{ page }}</span>
+        {% else %}
+          {% if page == 1 %}
+            <a href="{{ '/blog/' | relative_url }}" style="padding: 8px 14px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; text-decoration: none; color: #e5e6e7; font-size: 0.9em;">1</a>
+          {% else %}
+            <a href="{{ site.paginate_path | relative_url | replace: ':num', page }}" style="padding: 8px 14px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; text-decoration: none; color: #e5e6e7; font-size: 0.9em;">{{ page }}</a>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if paginator.next_page %}
+        <a href="{{ paginator.next_page_path | relative_url }}" style="padding: 8px 14px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; text-decoration: none; color: #e5e6e7; font-size: 0.9em;">下一頁 &raquo;</a>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}
+

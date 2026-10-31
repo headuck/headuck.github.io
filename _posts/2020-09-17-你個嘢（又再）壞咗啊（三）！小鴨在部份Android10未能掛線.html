@@ -1,0 +1,29 @@
+---
+layout: post
+title: "你個嘢（又再）壞咗啊（三）！小鴨在部份 Android 10 未能掛線"
+date: 2020-09-17 13:51:30
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1358
+---
+<a href="/2018/11/04/你個嘢壞咗啊-來電攔截App突然失效之迷(下).html">前文</a>提到， 2018年推出的 Android P （Android 9）終於加入正式的掛線功能 API（TelecomManager#endCall），無須強制用戶更改預設撥號程式，取代原有非正式的 API ，
+讓攔截 App 繼續掛線。<br>
+
+不過，Google 似乎不讓攔截 App 的日子好過，繼 2019 年初對 Google Play 上使用來電相關權限的 App，加入審批機制及功能限制後，又在 Android 10 中，宣布上述剛於 Android 9 公開的 <a href="https://developer.android.com/reference/kotlin/android/telecom/TelecomManager#endCall()">TelecomManager#endCall</a> 功能界面為 deprecated （已被廢棄）。<br>
+
+標示為「廢棄」的界面，通常意味暫時仍可以用，以保持向後兼容性，但日後隨時可以移除。開發者應改用替代方案。Android <a href="https://developer.android.com/reference/java/lang/Deprecated">官方文件</a>說法是不鼓勵使用。<br>
+
+而推薦的替代方案，便是採用實作 <a href="https://developer.android.com/reference/android/telecom/CallScreeningService">CallScreeningService</a> 的方式，用新的 API 處理來電。CallScreeningService 的方式是在 API 24 （Android 7.0）加入的，但一直只供預設通話撥號程式採用（這是某些攔截 App 要用戶將其設為預設通話撥號程式的原因）。由於方法較具侵擾性，體驗亦較差（強逼用戶用攔截 App 自制撥號界面，這在功能和UI整合肯定跟原裝有一段距離），在有另外可行的方法下，小鴨一直沿用傳統的方式（背景等待來電狀態改變的廣播），沒有採用 CallScreeningService。<br>
+
+不過到了 Android 10 ，加入了設定 App Role 的功能，用戶可指定不用的 Role (如 Dialer) 等，給予有相關功能的 App (每項 Role 只可給予一隻 App，但一隻 App 可擁有多個 Role)，而 Call Screening 獨立於 Dialer 自成一個 Role。在此架構下，攔截 App 不用再要求成為預設通話程式及包含不必要的撥號功能，亦可用 CallScreeningService 的方式攔截。而 Android 10 的 CallScreeningService 亦在掛線外加入了靜音選項，應可涵蓋一般（接聽再掛線之外）的需要。<br>
+
+由於原有掛線的API隨時會移除，似乎轉用 CallScreeningService 是遲早的問題，不過，小鴨去年先要應付 Google Play 來電相關權限審批，之後要應付 Google Play 強制 App 升級至支援 64-bit 的問題（見 <a href="/2020/06/21/小鴨幹線-開發版0217維護性更新.html">0.2.17 版的介紹</a>），而 Android 10 的 TelecomManager#endCall 亦似乎暫時可用，加上 CallScreeningService 據指仍是 buggy （參考 <a href="https://stackoverflow.com/questions/43617497/can-a-third-party-app-implement-callscreeningservice-in-android-7">Stack Overflow 的相關問題</a>），因此在有限時間下，一直未研究採用 CallScreeningService，直至<br>
+
+<blockquote>
+"你個嘢(又再)壞咗啊！"</blockquote>
+
+當小鴨早前試過 Android 11 的 emulator 仍可使用舊 API (TelecomManager#endCall)，以為可以拖多一年的時候，有不同機種的用戶回報指出，小鴨在一些機款的 Android 10 不能掛線，只能靜音！根據回報的線索推敲，應該是 TelecomManager#endCall 在某些機種不再供 App 使用，這次似乎是部份廠商因應這個 API 已經 deprecated 一段時間，而將之移除或封鎖。<br>
+
+由於 CallScreeningService 是完全不同的攔截機制，開發需時，小鴨目前在這些 TelecomManager#endCall 失效的機款，暫時會使用了和上次一樣的後備方案（模擬 headset 操作，需要存取通知權）。若用戶發覺在 Android 10 之上小鴨有未能掛線的問題，請下載<a href="/2016/02/13/小鴨幹線0226-APK下載.html">完整版</a>更新，<strong>再給予存取通知權</strong>，試試是否能正常掛線。<br>

@@ -1,0 +1,31 @@
+---
+layout: post
+title: "V4 Support library Fragment.getLoaderManager() vs getActivity().getSupportLoaderManager()"
+date: 2015-12-08 11:46:16
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 44
+---
+小鴨有來電時撞到pat咁既野，之前未遇過之後又reproduce唔到，最近又無改過相關既Code -<br>
+<pre>java.lang.NullPointerException: Attempt to invoke virtual method 'com.headuck.headuckblocker.dblistview.DbRecord$DbRecordView com.headuck.headuckblocker.dblistview.DbListFragmentBase$ListRecyclerAdapter.swapData(com.headuck.headuckblocker.dblistview.DbRecord$DbRecordView)' on a null object reference
+    at com.headuck.headuckblocker.dblistview.DbListFragmentBase.onLoadFinished(DbListFragmentBase.java:75)<br>
+    at com.headuck.headuckblocker.dblistview.DbListFragmentBase.onLoadFinished(DbListFragmentBase.java:27)<br>
+    at android.support.v4.app.LoaderManagerImpl$LoaderInfo.callOnLoadFinished(LoaderManager.java:476)<br>
+    at android.support.v4.app.LoaderManagerImpl$LoaderInfo.onLoadComplete(LoaderManager.java:444)<br>
+    at android.support.v4.content.Loader.deliverResult(Loader.java:126)<br>
+    at com.headuck.headuckblocker.dblistview.JunkDbLoader.onComplete(JunkDbLoader.java:182)<br>
+    at com.headuck.headuckblocker.dblistview.JunkDbLoader$ForceLoadHandler.onComplete(JunkDbLoader.java:204)<br>
+    at com.headuck.headuckblocker.dblistview.DbRecord$RecordQueryThread$1.run(DbRecord.java:342)<br>
+    at android.os.Handler.handleCallback(Handler.java:815)<br>
+    at android.os.Handler.dispatchMessage(Handler.java:104)<br>
+    at android.os.Looper.loop(Looper.java:194)<br>
+    at android.app.ActivityThread.main(ActivityThread.java:5534)<br>
+    at java.lang.reflect.Method.invoke(Native Method)<br>
+    at java.lang.reflect.Method.invoke(Method.java:372)<br>
+    at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:955)<br>
+    at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:750)</pre>
+意思係<a href="http://developer.android.com/reference/android/support/v4/content/Loader.html">Loader</a> load完野call back時，Fragment的Listview未initialize，但係個Loader明明係遲過Fragment的Listview initialize的...<br>
+Trace一輪自己同suport library既source，仲計係因為在Fragment中用了<del>唔知邊度抄返來的</del>getActivity().getSupportLoaderManager()而唔係Fragment本身的<a href="http://developer.android.com/reference/android/support/v4/app/Fragment.html#getLoaderManager%28%29">getLoaderManager()</a>去攞個<a href="http://developer.android.com/reference/android/support/v4/app/LoaderManager.html">LoaderManager</a>，雖然兩者都係回覆同一個Loader Manager instance但係後者才會令Fragment在回收時處理個Loader。因此用了前者後，Fragment被回收時個Loader唔會被stop，而咁啱呢次Loader又做緊野...<br>
+API文件無特別提及呢點，因此之後去左StackOverflow寫低<a href="http://stackoverflow.com/questions/31088404/difference-between-getloadermanger-and-getactivity-getsupportloadermanager#34139461">呢段野</a>警世。（個accepted answer 自已list左段code已證明兩者不同，但又答話 I'm pretty sure there is no difference whatshoever between the two，真係...）<br>

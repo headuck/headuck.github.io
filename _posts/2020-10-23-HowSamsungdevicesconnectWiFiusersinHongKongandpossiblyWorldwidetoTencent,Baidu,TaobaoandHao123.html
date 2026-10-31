@@ -1,0 +1,674 @@
+---
+layout: post
+title: "How Samsung devices connect WiFi users in Hong Kong and possibly Worldwide to Tencent, Baidu, Taobao and Hao123"
+date: 2020-10-23 13:01:31
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1428
+---
+<a href="/2020/10/12/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part1).html">Part 1</a> and <a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">Part 2</a> of this series examined how the Android framework code, as modified by Samsung, forced a Mainland Chinese DNS service upon Samsung phone users with Hong Kong firmware and those connected to Hong Kong mobile network, as well as how periodic DNS queries were made for <code>qq.com</code> to the DNS servers (without actually connecting to the <code>qq.com</code> site).
+
+However, this could not explain all those DNS queries to other popular Chinese websites like <code>baidu.com</code> (whereas such queries were also observed to cease when a Samsung phone was tricked into stopping the periodic DNS queries by changing the WiFi SSID, meaning that these queries are likely to be associated with Samsung firmware).  After some examination, the culprit for the remaining unwanted queries is found - the Network Stack module as modified by Samsung, under <code>/system/priv-app/InProcessNetworkStack/InProcessNetworkStack.jar</code>.<br>
+
+The <code>InProcessNetworkStack.jar</code> module of Samsung firmware has been decompiled and uploaded to the github repository <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network">SM-9750-TGY-Oct20-Network</a>.<br>
+
+<img class="aligncenter size-full wp-image-1435" src="/assets/uploads/2020/10/includedWithYourGalaxy1.jpg" alt="" width="770" height="764" />
+
+In short, the class <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java">NetworkMonitor</a> under the module, which is modified from Android project source <a href="https://cs.android.com/android/platform/superproject/+/master:packages/modules/NetworkStack/src/com/android/server/connectivity/NetworkMonitor.java">here</a>, is responible for the behaviour, including sending DNS queries and actually connecting to and / or sending plain HTTP requests to one or more of the following URLs to perform connectivity probes, when WiFi is connected to a network selected by the user, and the code determines that it is in a "China network":<br>
+<ul>
+ 	<li><code>http://www.qq.com</code></li>
+ 	<li><code>http://www.baidu.com</code></li>
+ 	<li><code>http://m.taobao.com</code></li>
+ 	<li><code>http://m.hao123.com</code></li>
+ 	<li><code>http://connectivity.samsung.com.cn/generate_204</code></li>
+</ul>
+<blockquote>It is also found that besides WiFi users in Hong Kong, Macau and Mainland China, worldwide users of Samsung WiFi-only devices (e.g. tablets) might be regarded as in a "China network" if there are sufficient access points imported from China or Hong Kong nearby, as determined by a voting algorithm specific to Samsung devices. Connection to those access points is not necessary for this to occur.</blockquote>
+In cases when the device does not consider itself to be in a "China network", it would stick to the normal behaviour of doing the test with the url as configured in the Android Global Settings <code>captive_portal_http_url</code> and <code>captive_portal_https_url</code>, which would usually be Google owned sites [1].<br>
+<blockquote><strong>Update</strong>: the new version of firmware for Hong Kong, released on 23 October (for Note 20 Ultra, firmware dated 20 October) has addressed the issue of treating "hk" the same way as "cn", addressing local concerns. However, the issue described below will still affect phones that are for Mainland China, connected to "cn" network, or near "cn" access points, after the firmware update.</blockquote>
+The following is again a detailed walkthrough of how the probes above are triggerred and sent. A method to avoid these requests in affected Samsung devices is provided at the end of the article.<br>
+<h3>Triggers from WifiConnectivityMonitor to NetworkMonitor</h3>
+Before going into how Samsung modified <code>NetworkMonitor</code> to launch probes on the Mainland China websites instead of the default Google site, we will first have a tour of the <code>WifiConnectivityMonitor</code> (hereafter shortened as WCM) code which initiated the probes. The version used to illustrate in this Part is from the updated Note 10+ firmware (Hong Kong version, dated 10 October 2020), uploaded to Github at <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java">WifiConnectivityMonitor.java</a> [2]<br>
+
+Under the WCM, the call to <code>NetworkMonitor</code> is triggered by methods <code>reportNetworkConnectivityToNM()</code>. They report to the <a href="https://developer.android.com/reference/android/net/ConnectivityManager"><code>ConnectivityManager</code></a>, a standard Android system service, that a connectivity check is needed as there may be changes in the circumstances of the WiFi connection.<br>
+
+These methods are from line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L9149">9149</a>-<br>
+<pre>public boolean reportNetworkConnectivityToNM(int step, int trigger) {
+    return reportNetworkConnectivityToNM(false, step, trigger);<br>
+}</pre>
+<pre>public boolean reportNetworkConnectivityToNM(boolean force, int step, int trigger) {
+    if ((!force &amp;&amp; trigger != QC_TRIGGER_AT_EVENT_ROAM_COMPLETE &amp;&amp; ((!this.mIsScreenOn &amp;&amp; mInitialResultSentToSystemUi) || isMobileHotspot())) || this.mIsInRoamSession || this.mIsInDhcpSession) {<br>
+        return false;<br>
+    }<br>
+    if (this.mNetwork != null) {<br>
+        if (this.mWCMQCResult != null) {<br>
+            Log.d(TAG, "QC is already queried to NM");<br>
+            return true;<br>
+        }<br>
+        Log.d(TAG, "QC is queried to NM. Waiting for result");<br>
+        removeMessages(QC_RESULT_NOT_RECEIVED);<br>
+        this.mWCMQCResult = obtainMessage();<br>
+        getCm().reportNetworkConnectivityForResult(this.mNetwork, this.mWCMQCResult);<br>
+        QcFailHistory qcFailHistory = this.mInvalidationFailHistory;<br>
+        qcFailHistory.qcStep = step;<br>
+        qcFailHistory.qcTrigger = trigger;<br>
+        qcFailHistory.qcStepTemp = -1;<br>
+        sendMessageDelayed(QC_RESULT_NOT_RECEIVED, 20000);<br>
+        if (isValidState()) {<br>
+            setLoggingForTCPStat(TCP_STAT_LOGGING_FIRST);<br>
+        }<br>
+    }<br>
+    return true;<br>
+}</pre>
+The main method first checks the pre-conditions for triggering the network connectivity test, i.e. force checking (<code>force</code>) is <code>true</code>, OR the call is triggered from a WiFi Roam Complete event (<code>QC_TRIGGER_AT_EVENT_ROAM_COMPLETE</code>), OR screen is on, OR the initial detection result after connection was not yet available (<code>mInitialResultSentToSystemUi</code> is <code>false</code>). But in any case it would not call the Network Monitor when the WiF connection is used as a mobile hotspot, is doing WiFi Roaming, or is querying DHCP.<br>
+
+After some further checking, it calls the <code>reportNetworkConnectivityForResult()</code> method of the Android <a href="https://developer.android.com/reference/android/net/ConnectivityManager"><code>ConnectivityManager</code></a>. The <code>reportNetworkConnectivityForResult()</code> method, which is a Samsung made variant of the standard <a href="https://developer.android.com/reference/android/net/ConnectivityManager#reportNetworkConnectivity(android.net.Network,%20boolean)"><code>reportNetworkConnectivity()</code></a> method, is for prompting the system to re-evaluate the network's connectivity (ultimately done by the <code>NetworkMonitor</code>) and other further actions as a result.<br>
+
+Tracing backwards, this <code>reportNetworkConnectivityToNM()</code> method is mainly invoked under two processes, which in turn are triggered by a lot of scenarios. These are briefly outlined below.<br>
+<h4>Internet Check</h4>
+The "Internet Check" is invoked by calling <code>requestInternetCheck()</code> (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L4143">4143</a>). It will send the <code>REPORT_NETWORK_CONNECTIVITY</code> message to the <code>WifiConectivityMonitor</code>, after some usual checking.<br>
+
+Line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L4137">4137</a> onwards:<br>
+<pre>private void requestInternetCheck(int trigger) {
+    requestInternetCheck(this.mInvalidationFailHistory.qcStepTemp, trigger);<br>
+}<br>
+
+private void requestInternetCheck(int step, int trigger) {<br>
+    WifiEleStateTracker wifiEleStateTracker = this.mWifiEleStateTracker;<br>
+    if (wifiEleStateTracker != null &amp;&amp; wifiEleStateTracker.checkEleValidBlockState()) {<br>
+        Log.d(TAG, "REPORT_NETWORK_CONNECTIVITY ignored by ele block");<br>
+    } else if (this.mIsInRoamSession || this.mIsInDhcpSession) {<br>
+        Log.d(TAG, "REPORT_NETWORK_CONNECTIVITY ignored In Roam Session");<br>
+    } else if (syncGetCurrentWifiInfo().getRssi() &gt;= -55 || !this.mIsRoamingNetwork) {<br>
+        sendMessage(REPORT_NETWORK_CONNECTIVITY, step, trigger);<br>
+    } else {<br>
+        Log.d(TAG, "REPORT_NETWORK_CONNECTIVITY ignored by possible roaming");<br>
+    }<br>
+}</pre>
+When this message is received under the <code>InvalidState</code> (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L2905">2905</a>), <code>ValidNonSwitchableState</code> (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L3207">3207</a>) or <code>ValidSwitchableState</code> (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L3367">3367</a>) of the WCM, <code>reportNetworkConnectivityToNM()</code> will be called without setting the <code>force</code> parameter. A typical handling is shown below. Given the state hierarchy (lines <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L1061">1061</a>-1072), these states cover all the <code>ConnectedState</code>, except <code>CaptivePortalState</code> and <code>ValidNoCheckState</code> (i.e. <code>mCurrentMode</code> is 0).<br>
+<pre>case WifiConnectivityMonitor.REPORT_NETWORK_CONNECTIVITY:
+    WifiConnectivityMonitor.this.reportNetworkConnectivityToNM(msg.arg1, msg.arg2);<br>
+    break;</pre>
+<h4>Forced Validation Check</h4>
+"Forced validation check" is invoked when <code>enableValidationCheck()</code> (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L11120">11120</a>) is called.  It will set <code>mValidationCheckMode</code> and call <code>reportNetworkConnectivityToNM()</code> once, with <code>force</code> parameter set to <code>true</code> (i.e. always check even if screen is off, except in transient or hotspot modes). Then, if <code>mValidationBlock</code> has been set to <code>true</code>, it will send the <code>VALIDATION_CHECK_FORCE</code> message after a delay.<br>
+<pre>private void enableValidationCheck() {
+    if (DBG) {<br>
+        Log.d(TAG, "ValidationCheckMode : " + mValidationCheckMode + ", ValidationCheckCount : " + mValidationCheckCount + ", ValidationBlock : " + mValidationBlock);<br>
+    }<br>
+    if (!mValidationCheckMode || mValidationCheckCount &lt;= 0) {<br>
+        if (DBG) {<br>
+            Log.d(TAG, "Validation Check enabled.");<br>
+        }<br>
+        mValidationResultCount = 0;<br>
+        mValidationCheckCount = 0;<br>
+        mValidationCheckMode = true;<br>
+        mValidationCheckTime = VALIDATION_CHECK_COUNT; // 32<br>
+        Message message = this.mWCMQCResult;<br>
+        if (message != null) {<br>
+            message.recycle();<br>
+            this.mWCMQCResult = null;<br>
+        }<br>
+        removeMessages(QC_RESULT_NOT_RECEIVED);<br>
+        boolean queried = reportNetworkConnectivityToNM(true, 5, 20);<br>
+        if (!mValidationBlock) {<br>
+            return;<br>
+        }<br>
+        if (queried) {<br>
+            mValidationCheckCount = 1;<br>
+            if (DBG) {<br>
+                Log.d(TAG, "mValidationCheckCount : " + mValidationCheckCount);<br>
+            }<br>
+            sendMessageDelayed(VALIDATION_CHECK_FORCE, (long) (mValidationCheckTime * 1000));<br>
+            return;<br>
+        }<br>
+        if (DBG) {<br>
+            Log.d(TAG, "Starting to check VALIDATION_CHECK_FORCE is delayed.");<br>
+        }<br>
+        mValidationCheckTime = VALIDATION_CHECK_COUNT * 2;<br>
+        sendMessageDelayed(VALIDATION_CHECK_FORCE, 10000);<br>
+    } else if (DBG) {<br>
+        Log.d(TAG, "Validation Check was already enabled.");<br>
+    }<br>
+}</pre>
+When this message is received under <code>InvalidState</code> of the WCM, it would continue to call <code>reportNetworkConnectivityToNM</code> and then resend the <code>VALIDATION_CHECK_FORCE</code> message to trigger itself again after a delay [3]. In order words, this validation check would form a loop under <code>ValidationBlock</code> mode. The loop is shown below (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L2922">2922</a>-)<br>
+<pre>case WifiConnectivityMonitor.VALIDATION_CHECK_FORCE:
+    if (WifiConnectivityMonitor.DBG) {<br>
+        Log.d(WifiConnectivityMonitor.TAG, "VALIDATION_CHECK_FORCE");<br>
+    }<br>
+    WifiConnectivityMonitor.this.mValidationCheckEnabledTime = SystemClock.elapsedRealtime();<br>
+    WifiConnectivityMonitor.this.mValidationCheckTime /= 2; // ??<br>
+    WifiConnectivityMonitor.this.mValidationCheckCount++;<br>
+    if (WifiConnectivityMonitor.DBG) {<br>
+        Log.d(WifiConnectivityMonitor.TAG, "mValidationCheckCount : " + WifiConnectivityMonitor.this.mValidationCheckCount);<br>
+    }<br>
+    if (WifiConnectivityMonitor.this.mWCMQCResult != null) {<br>
+        WifiConnectivityMonitor.this.mWCMQCResult.recycle();<br>
+        WifiConnectivityMonitor.this.mWCMQCResult = null;<br>
+    }<br>
+    WifiConnectivityMonitor.this.removeMessages(WifiConnectivityMonitor.QC_RESULT_NOT_RECEIVED);<br>
+    boolean queried = WifiConnectivityMonitor.this.reportNetworkConnectivityToNM(true, 5, 20);<br>
+    if (WifiConnectivityMonitor.this.mValidationCheckCount &gt; WifiConnectivityMonitor.VALIDATION_CHECK_MAX_COUNT /* 4 */) {<br>
+        WifiConnectivityMonitor.this.mValidationCheckMode = false;<br>
+        WifiConnectivityMonitor.this.setValidationBlock(false);<br>
+        if (WifiConnectivityMonitor.DBG) {<br>
+            Log.d(WifiConnectivityMonitor.TAG, "mValidationCheckCount expired");<br>
+        }<br>
+        if (queried) {<br>
+            WifiConnectivityMonitor.this.mValidationResultCount = 0;<br>
+            WifiConnectivityMonitor.this.mValidationCheckCount = 0;<br>
+        } else {<br>
+            WifiConnectivityMonitor.this.sendMessageDelayed(WifiConnectivityMonitor.VALIDATION_CHECK_FORCE, 10000);<br>
+        }<br>
+        return true;<br>
+    }<br>
+    WifiConnectivityMonitor.this.sendMessageDelayed(WifiConnectivityMonitor.VALIDATION_CHECK_FORCE, (long) (WifiConnectivityMonitor.this.mValidationCheckTime * 1000));<br>
+    return true;</pre>
+The loop will end when the <code>CONNECTIVITY_VALIDATION_RESULT</code> message is received (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L2908">2908</a>), i.e. checking result is available, by removing the <code>VALIDATION_CHECK_FORCE</code> message in the queue.<br>
+
+Tracing further back, the above two processes are invoked under numerous circumstances. The validation check mainly comes from a loop to keep monitoring the signal strength, when the connection is not yet valid. The Internet check comes from a wider range of sources, including from inside the loop discussed in Part 2 which keeps making minutely DNS queries of <code>qq.com</code>. While I would not go into further details on these circumstances, it would suffice to note in general that various connection status or signal quality changes could trigger the calls, and generally a lower <code>mCurrentMode</code> value (such as when the SSID is set to match the pattern of ignored network, forcing <code>mCurrentMode</code> to 0) would reduce the frequency of such calls.<br>
+<h3>Other signals from WCM to NetworkMonitor</h3>
+It appears that the WCM is built by Samsung separately from the <code>NetworkMonitor</code> and <code>ClientModeImpl</code> of standard Android, as there is some overlap of functions among them. Perhaps as a result of this, the WCM, in addition to the conventional method of calling <code>NetworkMonitor</code> through <code>ConnectivityManager</code> above, also communicates with the <code>NetworkMonitor</code> through the Android Global Settings (i.e. <code>Settings.Global</code> which, as its name implies, are usually for longer-term system settings). The settings concerned include the following:<br>
+<h4>Captive portal mode</h4>
+The <code>captive_portal_mode</code> is a flag in standard Android settings for controlling how the Network Monitor dealt with captive portals. Normally, setting it to 0 using <code>adb</code> would disable the detection (See this stackexchange <a href="https://android.stackexchange.com/questions/186993/captive-portal-parameters">answer</a>). However, in Samsung phones the value of this setting would be overwritten by the WCM at various stages of establishing a WiFi connection to control the behaviour of Network Monitor, making it unavailable for setting by users.<br>
+
+The setting is modified in the WCM at lines <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L9476">9746</a>-<br>
+<pre>public void setCaptivePortalMode(int enabled) {
+    Settings.Global.putInt(this.mContext.getContentResolver(), WCMCallbacks.CAPTIVE_PORTAL_MODE, enabled);<br>
+}</pre>
+WCM sets the value to 1 (enabled) in most of the circumstances, except a callback from <code>checkIsCaptivePortalException()</code> method of <code>ClientModeImpl</code> (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L9489">9489</a>-), which would be called upon entry to the connected state. This may set it to 0 (disable) depending on external factors such as SSID (including the case when <code>isIgnorableNetwork()</code>, discussed in Part 2, returns <code>true</code>).<br>
+<h4>Country code from scan results</h4>
+A more interesting setting, which mainly affects WiFi-only Samsung products as to be discussed below, is <code>wifi_wcm_country_code_from_scan_result</code>. It holds the outcome of a voting mechanism for determining the country code of the device using purely WiFi scanning results (since the country code from mobile network is not available for these devices).<br>
+
+Before going through Samsung's algorithm, here is a brief background of the relevant WiFi protocol. Under the 802.11 standard, WiFi signals would contain management frames which consist of a number of "Information Elements" (IEs). These IEs have a common format, starting with the Element ID which encodes what type of information is stored with this IE, followed by the field length and actual data.<br>
+
+In particular, an ID value of 7 denotes the "<a href="https://dox.ipxe.org/structieee80211__ie__country.html">c<span class="comment">ountry information element</span></a>".  This IE is used to store country code data (with the country code in the first 2 bytes of data) among other information. Presumably, WiFi routers are required to know the country code in which they are operating, such that they can ensure that the channels used and the signal strength is in compliance with the local laws.<br>
+
+While this information is broadcast by WiFi access points, it is usually not accessible to the users. However, system software at privileged levels, like the WCM, has access to the IE contents in scan results, including the country code, if they are present.<br>
+
+The first part of the <code>checkCountryCodeFromScanResults()</code> method of the WCM (line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L8738">8738</a>-), shown below, gathers all country code information of WiFi access points that are scanned, and counts the occurrence of each country code - with a twist: it specifically looks for <code>HK</code> and <code>MO</code> (standing for Hong Kong and Macau), and if encountered, replaces it with <code>CN</code> before counting.<br>
+
+Note that this is a separate piece of code from what was discussed in Part 1 (which still exists in the latest firmware as at October 2020), both making a similar assumption. The different places and forms that the assumption exists throughout the Samsung framework code (spoiler: the third one will be coming) somehow suggests that this might not be an unintentional mistake.<br>
+<pre>public void checkCountryCodeFromScanResults() {
+    int scanCount = 0;<br>
+    int bssidWithCountryInfo = 0;<br>
+    HashMap&lt;String, Integer&gt; countryCodeMap = new HashMap&lt;&gt;();<br>
+    StringBuilder sb = new StringBuilder();<br>
+    synchronized (mScanResultsLock) {<br>
+        for (ScanResult scanResult : mScanResults) {<br>
+            scanCount++;<br>
+            ScanResult.InformationElement[] informationElementArr = scanResult.informationElements;<br>
+            int length = informationElementArr.length;<br>
+            int i = 0;<br>
+            while (true) {<br>
+                if (i &gt;= length) {<br>
+                    break;<br>
+                }<br>
+                ScanResult.InformationElement ie = informationElementArr[i];<br>
+                if (ie.id == 7) {<br>
+                    bssidWithCountryInfo++;<br>
+                    if (ie.bytes.length &gt;= 2) {<br>
+                        String country = new String(ie.bytes, 0, 2, StandardCharsets.UTF_8).toUpperCase();<br>
+                        if ("HK".equals(country) || "MO".equals(country)) {<br>
+                            country = "CN";<br>
+                        }<br>
+                        if (countryCodeMap.containsKey(country)) {<br>
+                            countryCodeMap.put(country, Integer.valueOf(countryCodeMap.get(country).intValue() + 1));<br>
+                        } else {<br>
+                            countryCodeMap.put(country, 1);<br>
+                        }<br>
+                    }<br>
+                } else {<br>
+                    i++;<br>
+                }<br>
+            }<br>
+        }<br>
+    }<br>
+    /** <br>
+     * remaining code below<br>
+     */<br>
+}</pre>
+After gathering the statistics of nearby WiFi networks, with <code>HK</code>/<code>MO</code> replaced by and counted as <code>CN</code>, the code selects the "winner", i.e. the country code with the highest count. It specifically ensures that if this ends in a tie, with <code>CN</code> and another country code having the same count, <code>CN</code> wins.<br>
+
+Then, if winner has at least 5 counts, the record kept by the variable <code>mCountryCodeFromScanResult</code> and the <code>wifi_wcm_country_code_from_scan_result</code> global setting would be updated - again with a special rule: if the previous winner is <code>CN</code> but the new winner is anyone else, it would not recognize the new winner unless the previous <code>CN</code> record was more than 24 hours old. (Or the phone has been switched off since then, thus resetting the time).<br>
+
+The remaining code from line <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java#L8773">8773</a>-<br>
+<pre>if (bssidWithCountryInfo != 0) {
+    int winnerCount = 0;<br>
+    if (countryCodeMap.containsKey("CN")) {<br>
+        countryCodeMap.get("CN").intValue();<br>
+    }<br>
+    String pollWinner = "";<br>
+    String stat = "";<br>
+    for (String c : countryCodeMap.keySet()) {<br>
+        stat = (stat + c + ": " + countryCodeMap.get(c)) + "  ";<br>
+        if (countryCodeMap.get(c).intValue() &gt; winnerCount || (countryCodeMap.get(c).intValue() &gt;= winnerCount &amp;&amp; "CN".equals(c))) {<br>
+            pollWinner = c;<br>
+            winnerCount = countryCodeMap.get(c).intValue();<br>
+        }<br>
+    }<br>
+    StringBuilder sb = new StringBuilder();<br>
+    ...<br>
+    if (winnerCount &gt;= 5) {<br>
+        if ("CN".equals(pollWinner)) {<br>
+            mLastChinaConfirmedTime = System.currentTimeMillis();<br>
+        }<br>
+        if ("CN".equals(mCountryCodeFromScanResult) &amp;&amp; !"CN".equals(pollWinner)) {<br>
+            long remainingTime = 86400000 - (System.currentTimeMillis() - mLastChinaConfirmedTime);<br>
+            if (remainingTime &lt; 0) { sb.append(" | CISO Updated [24h expired] - CN -&gt; " + pollWinner);<br>
+                mCountryCodeFromScanResult = pollWinner;<br>
+                Settings.Global.putString(this.mContext.getContentResolver(), "wifi_wcm_country_code_from_scan_result", mCountryCodeFromScanResult);<br>
+            } else {<br>
+                sb.append("  |  CISO changed but not updated - CN -X-&gt; " + pollWinner + " , maintain CN for next " + (remainingTime / 1000) + " seconds");<br>
+            }<br>
+        } else if (!pollWinner.equals(mCountryCodeFromScanResult)) {<br>
+            sb.append("  |  Updated - " + mCountryCodeFromScanResult + "-&gt;" + pollWinner);<br>
+            mCountryCodeFromScanResult = pollWinner;<br>
+            Settings.Global.putString(mContext.getContentResolver(), "wifi_wcm_country_code_from_scan_result", mCountryCodeFromScanResult);<br>
+        }<br>
+    }<br>
+    ...<br>
+}</pre>
+<h4>Roam complete</h4>
+Yet another signal the WCM sends to the <code>NetworkMonitor</code> via global settings is the Roam Complete event. The <code>wifi_wcm_event_roam_complete</code> setting was set in the <code>setRoamEventToNM()</code> method. Under the WCM, it will be set to 1 after the WiFi roam session is completed.  After the <code>NetworkMonitor</code> "comsumed" the signal, it would be reset to 0 by the <code>NetworkMonitor</code>. It is also reset by WCM upon WiFi disconnection.<br>
+<pre>private void setRoamEventToNM(int enable) {
+    Settings.Global.putInt(this.mContentResolver, "wifi_wcm_event_roam_complete", enable);<br>
+}</pre>
+<h3>Enter the Network Monitor</h3>
+The <code>reportNetworkConnectivityForResult()</code> call from the WCM above will eventually reach the <code>ConnectivityService</code>, and is handled by the method <code>handleReportNetworkConnectivityForResult()</code> under the class (this is decompiled from the <code>services.jar</code> located at <code>/system/framework</code>. The code is similar to the standard Android method <a href="https://cs.android.com/android/platform/superproject/+/master:frameworks/base/services/core/java/com/android/server/ConnectivityService.java;l=4364;drc=master"><code>handleReportNetworkConnectivity()</code></a>). This method will call the <code>forceReevaluation()</code> method of <code>NetworkMonitor</code> associated with the WiFi network. (Note that the standard Android method <code>handleReportNetworkConnectivity()</code>, which can be invoked by user Apps, will also end up at <code>forceReevaluation()</code>. So the WCM is not the only source to invoke the connectivity probe of <code>NetworkMonitor</code> to be discussed below).<br>
+<pre>private void handleReportNetworkConnectivityForResult(Network network, int uid) {
+    NetworkAgentInfo nai;<br>
+    if (network == null) {<br>
+        nai = getDefaultNetwork();<br>
+    } else {<br>
+        nai = getNetworkAgentInfoForNetwork(network);<br>
+    }<br>
+    if (nai != null &amp;&amp; nai.networkInfo != null &amp;&amp; nai.networkInfo.getType() == 1 &amp;&amp; this.mUserWantAsIs) {<br>
+        log("User want the CaptivePortal network as is. Ignore reportNetworkConnectivity for Wi-Fi network");<br>
+    } else if (nai != null &amp;&amp; nai.networkInfo.getState() != NetworkInfo.State.DISCONNECTING &amp;&amp; nai.networkInfo.getState() != NetworkInfo.State.DISCONNECTED) {<br>
+        int netid = nai.network.netId;<br>
+        log("reportNetworkConnectivityForResult(" + netid + ") by " + uid);<br>
+        if (nai.everConnected &amp;&amp; !isNetworkWithLinkPropertiesBlocked(getLinkProperties(nai), uid, false)) {<br>
+            nai.networkMonitor().forceReevaluation(uid);<br>
+        }<br>
+    }<br>
+}</pre>
+<h4>The NetworkMonitor States</h4>
+Like the WCM, the <code>NetworkMonitor</code> is also a <code>StateMachine</code>. It is present in standard Android and is responsible for, among others, probing internet connectivity for the detection of captive portal, and launching a browser for users to dealt with a captive portal. Its states include <code>EvaluatingState</code>, <code>ProbingState</code>, <code>WaitingForNextProbeState</code>, <code>CaptivePortalState</code>, etc. The state hierarchy is at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L263">263</a> -<br>
+<pre>addState(this.mDefaultState);
+    addState(this.mMaybeNotifyState, this.mDefaultState);<br>
+        addState(this.mEvaluatingState, this.mMaybeNotifyState);<br>
+            addState(this.mProbingState, this.mEvaluatingState);<br>
+            addState(this.mWaitingForNextProbeState, this.mEvaluatingState);<br>
+        addState(this.mCaptivePortalState, this.mMaybeNotifyState);<br>
+    addState(this.mEvaluatingPrivateDnsState, this.mDefaultState);<br>
+    addState(this.mValidatedState, this.mDefaultState);<br>
+setInitialState(this.mDefaultState);</pre>
+From the initial <code>DefaultState</code>, the <code>NetworkMonitor</code> will enter <code>EvaluatingState</code> upon connection (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L427">427</a>), as well as when a <code>CMD_FORCE_REEVALUATION</code> message is received at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L484">484</a>.<br>
+
+Of relevance to us is the <code>CMD_FORCE_REEVALUATION</code> message, which would be sent by the call to the <code>forceReevaluation()</code> method (at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L295">295</a>), invoked from the <code>ConnectivityService</code> above:<br>
+<pre>public void forceReevaluation(int responsibleUid) {
+    sendMessage(CMD_FORCE_REEVALUATION /*8*/, responsibleUid, 0);<br>
+}</pre>
+Upon entry to the <code>EvaluatingState</code>, it will send the <code>CMD_REEVALUATE</code> message to itself (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L624">624</a>).<br>
+
+So far, the code and the flow in the Network Monitor is largely the same as standard Android. The part handling the <code>CMD_REEVALUATE</code> message as taking from Android source, with helpful comments, at line <a href="https://cs.android.com/android/platform/superproject/+/master:packages/modules/NetworkStack/src/com/android/server/connectivity/NetworkMonitor.java;l=1245">1245</a> of <code>NetworkMonitor.java</code> is as follows:<br>
+<pre>case CMD_REEVALUATE:
+if (message.arg1 != mReevaluateToken || mUserDoesNotWant) {<br>
+    return HANDLED;<br>
+}<br>
+// Don't bother validating networks that don't satisfy the default request.<br>
+// This includes:<br>
+//  - VPNs which can be considered explicitly desired by the user and the<br>
+//    user's desire trumps whether the network validates.<br>
+//  - Networks that don't provide Internet access.  It's unclear how to<br>
+//    validate such networks.<br>
+//  - Untrusted networks.  It's unsafe to prompt the user to sign-in to<br>
+//    such networks and the user didn't express interest in connecting to<br>
+//    such networks (an app did) so the user may be unhappily surprised when<br>
+//    asked to sign-in to a network they didn't want to connect to in the<br>
+//    first place.  Validation could be done to adjust the network scores<br>
+//    however these networks are app-requested and may not be intended for<br>
+//    general usage, in which case general validation may not be an accurate<br>
+//    measure of the network's quality.  Only the app knows how to evaluate<br>
+//    the network so don't bother validating here.  Furthermore sending HTTP<br>
+//    packets over the network may be undesirable, for example an extremely<br>
+//    expensive metered network, or unwanted leaking of the User Agent string.<br>
+//<br>
+// On networks that need to support private DNS in strict mode (e.g., VPNs, but<br>
+// not networks that don't provide Internet access), we still need to perform<br>
+// private DNS server resolution.<br>
+if (!isValidationRequired()) {<br>
+    if (isPrivateDnsValidationRequired()) {<br>
+        validationLog("Network would not satisfy default request, "<br>
+                + "resolving private DNS");<br>
+        transitionTo(mEvaluatingPrivateDnsState);<br>
+    } else {<br>
+        validationLog("Network would not satisfy default request, "<br>
+                + "not validating");<br>
+        transitionTo(mValidatedState);<br>
+    }<br>
+    return HANDLED;<br>
+}<br>
+mEvaluateAttempts++;<br>
+
+transitionTo(mProbingState);<br>
+return HANDLED;</pre>
+If the network is a trusted one (e.g. WiFi selected manually by user, as opposed to WiFi selected by an App, for example), it would further transition into the <code>ProbingState</code>. The <code>ProbingState</code> is where the Samsung code derivates from the standard one.<br>
+
+Note the caution exercised by the original Android code, as explained in the comments above, before sending out the probe: e.g. the WiFi may be via an expensive metered network (e.g. tethering with a roaming phone). The frequent <code>qq.com</code> queries sent by Samsung's WCM code, illustrated in Part 2, did not seem to take sufficient care of this by checking the trusted and metered flags.<br>
+<h4>The usual suspect</h4>
+Before checking out how the probing is done, it is time to look at the usual suspect, the <code>inChinaNetwork()</code> method in the Network Monitor (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L2152">2152</a>-)<br>
+<pre>public boolean inChinaNetwork() {
+    if (this.mIsWifiOnly) {<br>
+        updateCountryIsoCode();<br>
+        if (isChineseIso(this.mScanResultsCountryIso) || isChineseIso(this.mDeviceCountryIso)) {<br>
+            Log.d(TAG, "Wi-Fi Only CISO: " + this.mScanResultsCountryIso + "/" + this.mDeviceCountryIso);<br>
+            return true;<br>
+        }<br>
+        Log.d(TAG, "Wi-Fi Only ISO: " + this.mScanResultsCountryIso + "/" + this.mDeviceCountryIso);<br>
+        return false;<br>
+    }<br>
+    String str3 = this.mCountryIso;<br>
+    if (str3 == null || str3.length() != 2) {<br>
+        updateCountryIsoCode();<br>
+    }<br>
+    if (!isChineseIso(this.mCountryIso)) {<br>
+        return false;<br>
+    }<br>
+    Log.d(TAG, "CISO: " + this.mCountryIso);<br>
+    return true;<br>
+}<br>
+
+private boolean isChineseIso(String str) {<br>
+    return "cn".equalsIgnoreCase(str) || "hk".equalsIgnoreCase(str) || "mo".equalsIgnoreCase(str);<br>
+}</pre>
+The <code>isChineseIso()</code> method under <code>NetworkMonitor</code>, a different instance from the method of the same name as shown in Part 1 and the third of its kind discussed, applies the same logic, returning <code>true</code> for <code>hk</code>. Based on this method, the <code>inChinaNetwork()</code> method applies two different tests to determine if it is in a network in China, depending on whether the device is WiFi-only (e.g. some tablets) or not.<br>
+
+From the above, for WiFi-only devices, it would return <code>true</code> if either <code>mScanResultsCountryIso</code> or <code>mDeviceCountryIso</code>, determined by <code>updateCountryIsoCode()</code>, is regarded as a Chinese country code with <code>isChineseIso()</code>. For other devices, it would just look at <code>mCountryIso</code>.<br>
+
+The <code>updateCountryIsoCode()</code> method is listed below (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L2182">2182</a>-).<br>
+<pre>private void updateCountryIsoCode() {
+    TelephonyManager telephonyManager = mTelephonyManager;<br>
+    if (telephonyManager != null) {<br>
+        mTelephonyCountryIso = telephonyManager.getNetworkCountryIso();<br>
+        Log.d(TAG, "updateCountryIsoCode() via TelephonyManager : ISO : " + mTelephonyCountryIso);<br>
+    }<br>
+    try {<br>
+        mDeviceCountryIso = SemCscFeature.getInstance().getString("CountryISO");<br>
+        Log.d(TAG, "updateCountryIsoCode() via SemCscFeature : ISO : " + mDeviceCountryIso);<br>
+    } catch (Exception unused) {<br>
+    }<br>
+    if (mScanResultsCountryIso == null) {<br>
+        mScanResultsCountryIso = mDependencies.getSetting(this.mContext, "wifi_wcm_country_code_from_scan_result", (String) null);<br>
+        Log.d(TAG, "updateCountryIsoCode() via Scan Results : ISO : " + mScanResultsCountryIso);<br>
+    }<br>
+    if (mTelephonyCountryIso == null || str4.length() != 2) {<br>
+        String str5 = mDeviceCountryIso;<br>
+        if (str5 != null &amp;&amp; str5.length() == 2) {<br>
+            mCountryIso = mDeviceCountryIso;<br>
+        }<br>
+    } else {<br>
+        mCountryIso = mTelephonyCountryIso;<br>
+    }<br>
+    Log.d(TAG, "updateCountryIsoCode() ISO : " + mCountryIso + " [" + mTelephonyCountryIso + "/" + mDeviceCountryIso + "/" + mScanResultsCountryIso + "]");<br>
+}</pre>
+We can see that for WiFi-only device, the <code>mScanResultsCountryIso</code> used is from the winner of the WiFi country code scanning in WCM discussed earlier. This value is read only at the first time the method is called after <code>NetworkMonitor</code> is instantiated. If <strong>either</strong> this value <strong>or</strong> the mDeviceCountryIso, i.e. the firmware country code, equals <code>cn</code>, <code>hk</code> or <code>mo</code>, <code>inChinaNetwork()</code> will return <code>true</code>.<br>
+
+Recalling how the scan result is evaluated, this means that even if your firmware is not from Mainland China / Hong Kong, when you try to connect to a WiFi network, and you are in areas which, for whatever reason, have several WiFi access points broadcasting <code>CN</code> or <code>HK</code> (e.g. someone installed batches of inexpensive access points imported directly from China e-commerce sites), or your device has been passing through such an area (without connecting) in the past 24 hours, your device may regard itself to be in a China network.<br>
+
+For phone devices, the logic is the same as that in Part 1, i.e. the country is determined from the country code of the mobile network, and if that is not available, the device country code is used as the fallback.<br>
+<h4>Logic of the Probing State</h4>
+Back to the <code>ProbingState</code>. On entry of this state, the following method is executed (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L849">849</a>-）:<br>
+<pre>public void enter() {
+    if (NetworkMonitor.this.mEvaluateAttempts &gt;= 5) {<br>
+        TrafficStats.clearThreadStatsUid();<br>
+    }<br>
+    NetworkMonitor.this.mProbeToken ++;<br>
+    if (!NetworkMonitor.this.mNetworkCapabilities.hasTransport(TRANSPORT_WIFI /*1*/) || !NetworkMonitor.this.inChinaNetwork()) {<br>
+        mThread = new Thread(() -&gt; {<br>
+            NetworkMonitor.this.sendMessage(networkMonitor.obtainMessage(16, i, 0, networkMonitor.isCaptivePortal()));<br>
+        });<br>
+    } else {<br>
+        if (NetworkMonitor.this.getRoamEventfromWCM()) {<br>
+            NetworkMonitor.this.mRunFullParallelCheck = true;<br>
+            Log.d(NetworkMonitor.TAG, "Wi-Fi Roam Event received from WCM. Run full parallel check");<br>
+            NetworkMonitor.this.setRoamEventFromWCM(0);<br>
+        }<br>
+        mThread = new Thread(() -&gt; {<br>
+            NetworkMonitor.this.sendMessage(networkMonitor.obtainMessage(16, i, 0, networkMonitor.isCaptivePortalForChinaWifi()));<br>
+        });<br>
+    }<br>
+    mThread.start();<br>
+}</pre>
+<code>getRoamEventfromWCM()</code> is defined in line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L2234">2234</a>-
+<pre>private boolean getRoamEventfromWCM() {
+    return this.mDependencies.getSetting(this.mContext, "wifi_wcm_event_roam_complete", 0) == 1;<br>
+}</pre>
+From the above code, if <code>inChinaNetwork()</code> returns <code>true</code> for a WiFi network, it will call <code>isCaptivePortalForChinaWifi()</code>, after setting the flag <code>mRunFullParallelCheck</code> - the flag would be set to <code>false</code> upon entry to the <code>ValidState</code>. But if <code>getRoamEventfromWCM()</code> returns <code>true</code>, i.e. after the Roam complete event is sent by the WCM via the <code>wifi_wcm_event_roam_complete</code> setting, <code>mRunFullParallelCheck</code> would be set to <code>true</code>.<br>
+
+Then we come to the interesting part, the <code>isCaptivePortalForChinaWifi()</code> method:<br>
+
+URLs of four popular Mainland Chinese sites are defined in line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L78">78</a>:<br>
+<pre>private static final String[] SECONDARY_HTTP_URLS_CHINA = {"http://www.qq.com", "http://www.baidu.com", "http://m.taobao.com", "http://m.hao123.com"};</pre>
+<code>isCaptivePortalForChinaWifi</code> is defined at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L1820">1820</a>-:
+<pre>public CaptivePortalProbeResult isCaptivePortalForChinaWifi() {
+    URL url, url2, url3;<br>
+    CaptivePortalProbeResult captivePortalProbeResult;<br>
+    if (!mIsCaptivePortalCheckEnabled) {<br>
+        validationLog("Validation disabled.");<br>
+        return CaptivePortalProbeResult.SUCCESS;<br>
+    }<br>
+    URL makeURL = makeURL("http://connectivity.samsung.com.cn/generate_204");<br>
+    if (mRunFullParallelCheck) {<br>
+        url2 = makeURL(SECONDARY_HTTP_URLS_CHINA[0]);<br>
+        url = makeURL(SECONDARY_HTTP_URLS_CHINA[1]);<br>
+    } else {<br>
+        Random random = new Random(SystemClock.elapsedRealtime());<br>
+        String[] strArr = SECONDARY_HTTP_URLS_CHINA;<br>
+        int length = strArr.length;<br>
+        int nextInt = random.nextInt(strArr.length);<br>
+        url = makeURL(SECONDARY_HTTP_URLS_CHINA[(nextInt + 1) % length]);<br>
+        url2 = makeURL(SECONDARY_HTTP_URLS_CHINA[nextInt % length]);<br>
+    }<br>
+    ProxyInfo httpProxy = mLinkProperties.getHttpProxy();<br>
+    if (httpProxy == null || Uri.EMPTY.equals(httpProxy.getPacFileUrl())) {<br>
+        url3 = null;<br>
+    } else {<br>
+        url3 = makeURL(httpProxy.getPacFileUrl().toString());<br>
+        if (url3 == null) {<br>
+            return CaptivePortalProbeResult.FAILED;<br>
+        }<br>
+    }<br>
+    if (url3 == null &amp;&amp; (makeURL == null || url2 == null || url == null)) {<br>
+        return CaptivePortalProbeResult.FAILED;<br>
+    }<br>
+    long elapsedRealtime = SystemClock.elapsedRealtime();<br>
+    if (url3 != null) {<br>
+        captivePortalProbeResult = sendDnsAndHttpProbes(null, url3, 3);<br>
+        reportHttpProbeResult(8, captivePortalProbeResult);<br>
+    } else {<br>
+        captivePortalProbeResult = sendParallelHttpProbesForChinaWifi(httpProxy, makeURL, url2, url, mRunFullParallelCheck);<br>
+    }<br>
+    long elapsedRealtime2 = SystemClock.elapsedRealtime();<br>
+    sendNetworkConditionsBroadcast(true, captivePortalProbeResult.isPortal(), elapsedRealtime, elapsedRealtime2);<br>
+    log("isCaptivePortalForChinaWifi: isSuccessful()=" + captivePortalProbeResult.isSuccessful() + " isPortal()=" + captivePortalProbeResult.isPortal() + " RedirectUrl=" + captivePortalProbeResult.redirectUrl + " isPartialConnectivity()=" + captivePortalProbeResult.isPartialConnectivity() + " Time=" + (elapsedRealtime2 - elapsedRealtime) + "ms");<br>
+    return captivePortalProbeResult;<br>
+}</pre>
+The first test is for <code>mIsCaptivePortalCheckEnabled</code>, which records the value of the setting <code>captive_portal_mode</code> at startup of the Monitor.  Recall that in Samsung phones, this setting is sent from WCM and is mostly <code>true</code>.<br>
+
+Then the code will prepare a few URLs for probing. One is <code>http://connectivity.samsung.com.cn/generate_204</code> which is Samsung China's version of Google's <code>http://connectivitycheck.gstatic.com/generate_204</code>. The 2nd and 3rd ones are two Mainland Chinese sites selected from the 4 sites under <code>SECONDARY_HTTP_URLS_CHINA</code>: if <code>mRunFullParallelCheck</code> is <code>true</code> (i.e. just after the roam complete event), these will be <code>qq.com</code> and <code>baidu.com</code>. Otherwise it can be any two of the four sites.<br>
+
+Another URL is obtained from <code>ProxyInfo.getPacFileUrl()</code> method which is from the Android API (refer to the <a href="https://developer.android.com/reference/android/net/ProxyInfo#getPacFileUrl()">developer documentation</a>). See the wikipedia article for what <a href="https://en.wikipedia.org/wiki/Proxy_auto-config">PAC</a> (Proxy Auto-Config) is. If this PAC URL is set for a WiFi access point, both the Samsung and the array of Mainland China URLs would be ignored when connecting to it, and instead probing will be done with the PAC URL specified, using <code>sendDnsAndHttpProbes()</code> below. The reason is <a href="https://cs.android.com/android/platform/superproject/+/master:packages/modules/NetworkStack/src/com/android/server/connectivity/NetworkMonitor.java;l=2284">explained</a> in the standard Android code, largely due to the complexity of interpreting the PAC (which is JavaScript intended for browser consumption) at the system level.<br>
+<h4>Actual sending of probes</h4>
+Finally let's see how the actual probing is performed. The <code>sendParallelHttpProbesForChinaWifi()</code> is at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L1867">1867</a>-. The anonymous class in the decompiled code seems to be duplicated. But in essence, the core part is -<br>
+<pre>if (mType == 0) {
+    this.mResult = NetworkMonitor.this.sendDnsAndHttpProbes(proxy, httpUrl, 1);<br>
+} else if (mRunFullParallelCheck &amp;&amp; mType == 1) {<br>
+    this.mResult = NetworkMonitor.this.sendDnsAndHttpProbes(proxy, httpUrlCn, 1);<br>
+} else if (mRunFullParallelCheck &amp;&amp; mType == 2) {<br>
+    this.mResult = NetworkMonitor.this.sendDnsAndHttpProbes(proxy, httpUrlCn2, 1);<br>
+} else if (!mRunFullParallelCheck &amp;&amp; mType == 1) {<br>
+    this.mResult = NetworkMonitor.this.sendDnsAndCheckSocketSetup(proxy, httpUrlCn, 1);<br>
+} else if (!mRunFullParallelCheck &amp;&amp; mType == 2) {<br>
+    this.mResult = NetworkMonitor.this.sendDnsAndCheckSocketSetup(proxy, httpUrlCn2, 1);<br>
+}</pre>
+<code>mType</code> controls which one of the three URLs are being probed (1 for the <code>samsung.com.cn</code> address, and 2 or 3 for the two China URL addresses respectively). In other words, the Samsung URL is probed using sendDnsAndHttpProbes(), while the two Chinese URLs are probed using <code>sendDnsAndHttpProbes()</code> when <code>mRunFullParallelCheck</code> is <code>true</code> (in which case they are always <code>qq.com</code> and <code>baidu.com</code>), and <code>sendDnsAndCheckSocketSetup()</code> otherwise.
+
+In case <code>mRunFullParallelCheck</code> is <code>true</code>, <code>sendDnsAndHttpProbes()</code> may be called using <code>samsung.com.cn</code>, <code>qq.com</code> and <code>baidu.com</code>. It would proceed as follows (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L1205">1205</a>-):<br>
+<pre>private CaptivePortalProbeResult sendDnsAndHttpProbes(ProxyInfo proxyInfo, URL url, int i) {
+    return sendDnsAndHttpProbes(proxyInfo, url, i, null);<br>
+}<br>
+
+private CaptivePortalProbeResult sendDnsAndHttpProbes(ProxyInfo proxyInfo, URL url, int i, CaptivePortalProbeSpec captivePortalProbeSpec) {<br>
+    InetAddress[] sendDnsProbe = sendDnsProbe(proxyInfo != null ? proxyInfo.getHost() : url.getHost());<br>
+    if (!mCheckForDnsPrivateIpResponse || i == 3 || proxyInfo != null || mIgnorePrivateIpResponse || !isPrivateIpAddress(sendDnsProbe)) {<br>
+        return sendHttpProbe(url, i, captivePortalProbeSpec);<br>
+    }<br>
+    return CaptivePortalProbeResult.PRIVATE_IP;<br>
+}</pre>
+Unless <code>proxyInfo</code> was set (i.e. WiFi connection has a proxy), it will send DNS query for the provided URL through <code>sendDnsProbe()</code> at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L1222">1222</a>, which eventually calls the default system DNS resolver. The actual call is similar to standard Android process which can be traced <a href="https://cs.android.com/android/platform/superproject/+/master:packages/modules/NetworkStack/src/com/android/server/connectivity/NetworkMonitor.java;l=2375">here</a>. Unlike the DNS resolver under Samsung's custom code invoked by the WCM for <code>qq.com</code> as discussed in Part 2, the system DNS resolver would respect private DNS settings, and would make query to one of the DNS servers instead of all of them in parallel.<br>
+
+After getting the DNS results, if the result is not a private IP address (among other scenarios), it would call <code>sendHttpProbe()</code>, which performs the following (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L1302">1302</a>-, with comments from the corresponding Android source).<br>
+<pre>try {
+    // Follow redirects for PAC probes as such probes verify connectivity by fetching the<br>
+    // PAC proxy file, which may be configured behind a redirect.<br>
+    final boolean followRedirect = probeType == ValidationProbeEvent.PROBE_PAC;<br>
+    final HttpURLConnection conn = (HttpURLConnection) mCleartextDnsNetwork.openConnection(url);<br>
+    conn.setInstanceFollowRedirects(followRedirects);<br>
+    conn.setConnectTimeout(SOCKET_TIMEOUT_MS); // 10000<br>
+    conn.setReadTimeout(SOCKET_TIMEOUT_MS);<br>
+    conn.setRequestProperty("Connection", "close");<br>
+    conn.setUseCaches(false);<br>
+    if (mCaptivePortalUserAgent != null) {<br>
+        conn.setRequestProperty("User-Agent", mCaptivePortalUserAgent);<br>
+    }<br>
+    // cannot read request header after connection<br>
+    String requestHeader = urlConnection.getRequestProperties().toString();<br>
+
+    // Time how long it takes to get a response to our request<br>
+    long requestTimestamp = SystemClock.elapsedRealtime();<br>
+
+    httpResponseCode = urlConnection.getResponseCode();<br>
+    redirectUrl = urlConnection.getHeaderField("location");<br>
+    ...<br>
+} catch (IOException e) {<br>
+    validationLog(probeType, url, "Probe failed with exception " + e);<br>
+    if (httpResponseCode == CaptivePortalProbeResult.FAILED_CODE /*599*/) {<br>
+        // TODO: Ping gateway and DNS server and log results.<br>
+    }<br>
+} finally {<br>
+    if (urlConnection != null) {<br>
+        urlConnection.disconnect();<br>
+    }<br>
+    TrafficStats.setThreadStatsTag(oldTag);<br>
+}</pre>
+<code>mCaptivePortalUserAgent</code>, which was sent to the remote server with the HTTP request, defaults to <code>"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.32 Safari/537.36"</code> (line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L1143">1143</a>-) which is the same as the standard Android source. Unless there are additional signals added to the actual HTTP request, this should not divulge additional information besides your IP address, that a device on that address probably is a recent Samsung phone, and the time pattern when the phone is actively connected via WiFi.
+
+In the other case when <code>mRunFullParallelCheck</code> is <code>false</code>, <code>sendDnsAndCheckSocketSetup()</code> is called on 2 of the 4 Chinese sites. The difference with the earlier <code>sendDnsAndHttpProbes()</code>, as evident from its name, is that it just tries to establish a socket connection to the <code>HTTP</code> port (80) using the WiFi network.<br>
+<pre>public CaptivePortalProbeResult checkSocketSetup(URL url, int i, CaptivePortalProbeSpec captivePortalProbeSpec) {
+    ...<br>
+    int i2 = CaptivePortalProbeResult.FAILED_CODE/*599*/;<br>
+    try {<br>
+        long elapsedRealtime = SystemClock.elapsedRealtime();<br>
+        Socket createSocket = this.mNetwork.getSocketFactory().createSocket(url.getHost(), 80);<br>
+        long elapsedRealtime2 = SystemClock.elapsedRealtime();<br>
+        i2 = CaptivePortalProbeResult.SUCCESS_CODE/*204*/;<br>
+        ...<br>
+        validationLog(i, url, "time=" + j + "ms ret=" + 204 + " [checkSocketSetup] socket=" + createSocket.toString());<br>
+    } catch (IOException e) {<br>
+        validationLog(i, url, "checkSocketSetup failed with exception " + e);<br>
+    }<br>
+    ...<br>
+    if (captivePortalProbeSpec == null) {<br>
+        return new CaptivePortalProbeResult(i2, null, url.toString());<br>
+    }<br>
+    return captivePortalProbeSpec.getResult(i2, null);<br>
+}</pre>
+It appears the socket is not explicitly closed (unless there is error in decompilation). Anyway, although no application level information (like an HTTP request) is transmitted, it would be sufficient for the remote site to log your IP address, and the implication may be similar to the HTTP connection (although without the HTTP request and the Agent string, the server may be a bit less certain that this is a probe from Samsung phones).<br>
+
+Following the logic of <code>sendParallelHttpProbesForChinaWifi()</code> at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L2037">2037</a>-, when <code>mRunFullParallelCheck</code> is <code>true</code> (occurring once after WiFi roaming is completed), it would probe <code>samsung.com.cn</code> first. If connection is successful or a captive portal is found (a site returning 200), it would return the findings. Otherwise (perhaps while the <code>samsung.com.cn</code> site is temporarily reachable), it would probe the two Chinese websites in parallel. If both of these website redirects to the same domain, it is considered to be in a captive portal. On the other hand, when <code>mRunFullParallelCheck</code> is <code>false</code>, the probe to two of the Chinese sites is just for checking connectivity, and may not return sufficient information to tell a captive portal site apart from a successful connection to the Internet.<br>
+<pre>if (mRunFullParallelCheck) {
+    try {<br>
+        r13.start(); // r13 is the probe for samsung.com.cn<br>
+        countDownLatch.await(3000, TimeUnit.MILLISECONDS);<br>
+    } catch (InterruptedException unused) {<br>
+        validationLog("Error: probes wait interrupted!");<br>
+        return CaptivePortalProbeResult.FAILED;<br>
+    }<br>
+}<br>
+CaptivePortalProbeResult result = r13.result();<br>
+if (result.isPortal()) {<br>
+    reportHttpProbeResult(8, result);<br>
+    return result;<br>
+} else if (result.isSuccessful()) {<br>
+    reportHttpProbeResult(16, result);<br>
+    return result;<br>
+} else if (!mCheckForDnsPrivateIpResponse || !result.isDnsPrivateIpResponse()) {<br>
+    try {<br>
+        r14.start();  // r14 and r15 is the probe for 2 Chinese sites<br>
+        r15.start();<br>
+        countDownLatch2.await(3000, TimeUnit.MILLISECONDS);<br>
+        CaptivePortalProbeResult result2 = r14.result();<br>
+        CaptivePortalProbeResult result3 = r15.result();<br>
+        if (mRunFullParallelCheck &amp;&amp; result2.isPortal() &amp;&amp; result3.isPortal()) { // isPortal() means status code 200<br>
+            if (!(result2.redirectUrl == null || result3.redirectUrl == null)) {<br>
+                try {<br>
+                    if (new URL(str).getHost().equals(new URL(str2).getHost())) {<br>
+                        Log.d(TAG, "RDTTSL - " + url4.getHost());<br>
+                        reportHttpProbeResult(32, result2);<br>
+                        return result2;<br>
+                    }<br>
+                } catch (MalformedURLException e) {<br>
+                    Log.e(TAG, "sendParallelHttpProbesForChinaWifi MalformedURLException: " + e);<br>
+                }<br>
+            }<br>
+        }<br>
+        if (mCheckForDnsPrivateIpResponse &amp;&amp; (result2.isDnsPrivateIpResponse() || result3.isDnsPrivateIpResponse())) {<br>
+            validationLog("DNS response to the URL is private IP - CHINA WIFI");<br>
+            return CaptivePortalProbeResult.FAILED;<br>
+        } else if (result2.mHttpResponseCode == CaptivePortalProbeResult.FAILED_CODE <br>
+                   &amp;&amp; result3.mHttpResponseCode == CaptivePortalProbeResult.FAILED_CODE) { <br>
+            // If both Chinese sites failed, it would return the samsung.com.cn result<br>
+            try {<br>
+                r13.join();<br>
+                reportHttpProbeResult(8, r13.result());<br>
+                reportHttpProbeResult(16, r13.result());<br>
+                return r13.result();<br>
+            } catch (InterruptedException unused2) {<br>
+                validationLog("Error: http or https probe wait interrupted!");<br>
+                return CaptivePortalProbeResult.FAILED;<br>
+            }<br>
+        } else {<br>
+            CaptivePortalProbeResult captivePortalProbeResult = new CaptivePortalProbeResult(CaptivePortalProbeResult.SUCCESS_CODE/*204*/, null, <br>
+                result2.mHttpResponseCode != CaptivePortalProbeResult.FAILED_CODE ? result2.detectUrl : result3.detectUrl);<br>
+            // 204 above denotes successful, if any one of the two Chinese site probe is successful.<br>
+            reportHttpProbeResult(16, captivePortalProbeResult);<br>
+            return captivePortalProbeResult;<br>
+        }<br>
+    } catch (InterruptedException unused3) {<br>
+        validationLog("Error: probes wait interrupted! - CHINA WIFI");<br>
+        return CaptivePortalProbeResult.FAILED;<br>
+    }<br>
+} else {<br>
+    validationLog("DNS response to the URL is private IP - CHINA WIFI");<br>
+    return CaptivePortalProbeResult.FAILED;<br>
+}</pre>
+<h4>The "Normal" case</h4>
+In the alternative case of <code>inChinaNetwork()</code> returning <code>false</code>, it will perform the probe by calling <code>isCaptivePortal()</code>. This is similar to the standard Android handling, i.e. largely respecting the setting under the Global Settings <code>captive_portal_https_url</code> and <code>captive_portal_http_url</code> to set the query site, and respect the <code>captive_portal_use_https</code> flag (which defaults to <code>true</code>) which requires that one of the probes to use <code>HTTPS</code>, such that a private network cannot impersonate as the test site such as Google, causing the device to report as connected to Internet when in fact it is not. (In contrast, note that no HTTPS probes are used when <code>inChinaNetwork()</code> is <code>true</code> above, as all the hardcoded addresses use HTTP. In other words, this security feature, which is on by default, is disabled for Samsung phones in Hong Kong, Macau and Mainland China.)<br>
+<h3>The workaround</h3>
+Recall that if the PAC URL is present in the Proxy setting of the WiFi access point concerned, test for connectivity would be done with the PAC URL instead. Thus, while the standard <code>captive_portal_mode</code> global setting cannot be used in Samsung phones to disable the probes with Samsung or Mainland China sites as discussed in this article, a simple means of workaround to stop all such probes is as follows.<br>
+<blockquote>Set the PAC URL for the WiFi connection concerned to a URL serving a PAC file (for an access point, choose advanced settings, set the proxy option to Proxy Auto Configure, and enter the URL). To avoid actually affecting the browsers, the URL should return a PAC which does nothing, e.g. [4]
+<pre>function FindProxyForURL(url, host) {
+    return "DIRECT";<br>
+}</pre>
+To save data and avoid setting up a URL, if one does not need to use public WiFi / captive portals, an alternative is to run a simple App to serve the PAC locally, by running, for example, this open-sourced <a href="https://github.com/headuck/pac-url-service">PAC Service App</a> developed by the author, and setting the PAC URL to point to the localhost URL provided. Apk file is also available at the <a class="btn btn--inverse btn--large btn--pill" href="/2016/02/13/小鴨幹線0226-APK下載.html">download page</a> of this site.</blockquote>
+But please note that the setting has no effect on the DNS queries to <code>qq.com</code> sent by the WCM as discussed in Part 2. To stop those one need to change the SSID to match the patterns as discussed, until the issue is fixed in the firmware.<br>
+
+[1] The default fallback in standard Android are <code>http://connectivitycheck.gstatic.com/generate_204</code> and <code>https://www.google.com/generate_204</code> under <a href="https://cs.android.com/android/platform/superproject/+/master:packages/modules/NetworkStack/src/android/net/util/NetworkStackUtils.java;l=174">NetworkStackUtils.java</a>, if the setting is absent.  For Samsung WiFi-only devices, the URL for the HTTPS test site is hardcoded to <code>https://connectivitycheck.gstatic.com/generate_204</code> at line <a href="https://github.com/headuck/SM-9750-TGY-Oct20-Network/blob/main/com/android/server/connectivity/NetworkMonitor.java#L422">422</a>.<br>
+
+[2] This version has already updated its handling of DNS server as described in <a href="/2020/10/12/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part1).html">Part 1</a>, and force the DNS <code>114.114.114.114</code> only on China version of its firmware, but it has not touched the issue covered in Part 2.<br>
+
+[3] The delay is controlled by <code>mValidationCheckTime</code>, but strangely it divides by 2 in each loop, increasing the checking frequency i.e. the opposite of the usual exponential backoff, before the loop count reachs <code>VALIDATION_CHECK_MAX_COUNT</code>, defined as <code>4</code>.<br>
+
+[4] The author has set up a sample Github gist with the URL <code>https://gist.githubusercontent.com/headuck/809b0f793ae2cc9b88d2d44362d03a95/raw/729b26145df9eeb3cac3ffae7d55f2a950251870/direct.pac</code> as an example. But this link cannot be guarenteed to persist.<br>

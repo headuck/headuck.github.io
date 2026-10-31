@@ -1,0 +1,19 @@
+---
+layout: post
+title: "「小鴨幹線」開發版0.2.1"
+date: 2016-02-09 19:43:03
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 182
+---
+開發版0.2.1修正了設定為每日一次自動更新時，出現不斷重複檢查的問題，以及配合HKJunkcall保安升級。<br>
+<!--more-->
+<h4>重複檢查Bug</h4>
+俗語有云，there are two hard things in computer science: cache invalidation, naming things, and off-by-one errors.<br>
+<p>出現重複檢查原因是，設定為每N天更新一次時，例如設更新時間為5:30AM，在每次檢查／更新後，會將下次檢查時間設為現在起第N次出現5:30AM的時刻，但若是次更新／檢查是在當天5:30AM前少許被觸發，上述計算便會出現 off-by-one error （所設定的時刻在N-1日後），而若N為1，則會即時觸發再檢查，直至到達指定時刻。（變相DDoS HKJunkCall server ?）</p>
+由於0.2.0版起，背景檢查時都會發出on-going notification（其實主要因為對應Android 6的App Standby），所以才令問題被察覺。<br>
+謝謝hkepc wiisme，093236及ahuo回報問題。現已將計算方法改為現在時刻加N日後，最接近的5:30AM。<br>
+<h4>HKJunkCall.com保安升級</h4>
+此外，此版本配合HKJunkCall.com網站對下載資料庫檔案作出安全升級，作了相應更新，0.2.0及之前版本於三月之後，將不能再更新資料，<strong>請升級至本版本</strong>。參考：<a href="https://www.facebook.com/phoneadblacklist/posts/10153823167819019">HKJunkCall公布</a>。<br>

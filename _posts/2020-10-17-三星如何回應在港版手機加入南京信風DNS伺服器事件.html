@@ -1,0 +1,90 @@
+---
+layout: post
+title: "三星如何回應在港版手機加入南京信風 DNS 伺服器事件"
+date: 2020-10-17 02:24:27
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 1410
+---
+本文從源碼確認，三星 10 月中推出的 Android firmware 更新，已修訂原本強行加入南京信風 DNS 伺服器（<code>114.114.114.114</code>）的問題，但對發出 <code>qq.com</code> 有關的部份沒有改動，即<a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">前文</a>的分析仍然生效。<br>
+<!--more-->
+<h3>事件簿</h3>
+順帶一提，讓大家重溫、學習及欣賞大事化無的公關技巧：<br>
+2020年10月3日：問題先在 <a href="https://www.hkepc.com/forum/viewthread.php?fid=168&amp;tid=2586830&amp;extra=page%3D1&amp;page=1">HKEPC</a> 提出<br>
+2020年10月4日：<a href="https://lihkg.com/thread/2228654/page/1">lihkg</a> 開始討論<br>
+2020年10月8日：此時未有主流媒體報導及確認，三星的回應，是「我們早前已告知閣下所有三星客人手機上的資料都是保密存放的，因此一般不會有閣下所提及的情況出現。如閣下發現所提及的情況出現，請閣下上傳有關圖片和相關資料給我們詳細了解」來源：<a href="https://lih.kg/rbigyuX">lihkg</a>
+2020年10月8日：<a href="https://m.eprice.com.hk/mobile/talk/4523/216867/1/">ePrice</a> 報導<br>
+2020年10月8日：<a href="https://ezone.ulifestyle.com.hk/article/2772252/%E5%8D%B1%E9%9A%AA%EF%BC%81%E7%B6%B2%E6%8C%87%20Samsung%20%E6%B8%AF%E8%A1%8C%E9%9B%BB%E8%A9%B1%E6%84%9B%E7%94%A8%E4%B8%AD%E5%9C%8B%20DNS%20%E9%80%A3%E7%B6%AB">e-zone</a> 報導<br>
+2020年10月10日：<a href="https://hk.appledaily.com/finance/20201010/XK6CO4JETFGYLCUHUSFRO77BF4/">蘋果日報</a>報導<br>
+蘋果報導三星的回應，首次提及 DNS，但沒有承認問題：三星「未有正面回應公司是否預設 114 DNS於旗下所有 Galaxy 系列手機之中，僅稱非常重視客戶的私隱及個人資料的保護。當手機連接Wifi網絡時，DNS 只會傳送網站的IP地址，並不會儲存任何客戶的個人資料，也不會追蹤用戶所瀏覽的網站或收集瀏覽的內容。」<br>
+<table>
+<tbody>
+<tr>
+<td>事實上，如果最新版 Note 20U firmware（img 檔） 的 timestamp 正確，三星內部早在 10 月 10 日下午 3 時已完成對Note 20U firmware的修改及編繹，修正了 114 DNS 問題。由於發現問題，修正，至完成需時，特別是有一定規模的機構，亦即是說三星香港有可能在 10 月 8 日或之前已從本地討論區得悉問題以及向開發部門回報，而從短時間內完成修改至發布更新，亦肯定三星了解事情的嚴重性及敏感性。
+而對外，三星不主動就問題澄清，在傳煤查詢時採取不承認，不否認，需更多資料，以及淡化問題的回覆。而回覆內容，對事件不太深入理解的或會安心，但是對知悉問題所在者是不知所云。<br>
+<blockquote>「DNS 只會傳送網站的IP地址，並不會儲存任何客戶的個人資料，也不會追蹤用戶所瀏覽的網站或收集瀏覽的內容。」</blockquote>
+如果是指三星本身不會收集 DNS 資料，雖是事實但明顯具誤導性，因為很明顯對此事提出關注的用戶，不是擔心三星收集資料。但如果是指 DNS 服務供應商不會追蹤用戶所瀏覽的網站，卻不知三星是憑什麼作這項保證。事實上，Google就是有儲存這些資料，見其<a href="https://developers.google.com/speed/public-dns/privacy">政策</a>，用戶 IP 地址及其瀏覽的網站的資料會被收集，一般在 24 - 48 小時後轉為地方性的統計，但涉及一些保安或濫用調查除外。（而另一方面，<a href="https://developers.cloudflare.com/1.1.1.1/privacy/public-dns-resolver/">Cloudflare</a> 直接指不會存取完整用戶 IP 到 non-volatile memory，而經 truncate 的 IP 地址會在25小時內銷毀）。而可能令人擔心的 114.114.114.114，則恕作者未能發現其私隱政策。而即使南京信風本身沒有收集資料，須注意常規的 DNS 是沒有加密的，所有途經的中繼伺服器都可以收集相同的資料...<br>
+更何況，DNS 可以帶來的風險，絕不止於用戶瀏覽網站被追蹤...</td>
+</tr>
+</tbody>
+</table>
+2020年10月13日：<a href="https://www.winandmac.com/2020/10/samsung-sent-user-info-to-china-dns/">WinAndMac</a> 報導<br>
+WinAndMac引述三星回應：「三星非常重視客戶的私隱及個人資料的保護。當手機連接Wi-Fi網絡時，網域名稱系統（DNS）只會傳送網站的IP 地址，並不會儲存任何客戶的個人資料，也不會追蹤用戶所瀏覽的網站或收集瀏覽的內容。我們將不斷為Galaxy產品推出軟件更新，以提升客戶使用體驗。」<br>
+<table>
+<tbody>
+<tr>
+<td>即使此時已有充份證據是三星 firmware 的問題，亦無礙三星繼續其一貫處理技巧。而回應似乎顯示，三星已在計劃以軟件更新<del datetime="2020-10-16T15:01:32+00:00">解決問題</del>提升客戶使用體驗。</td>
+</tr>
+</tbody>
+</table>
+2020年10月15日：<a href="https://www.mobilemagazinehk.com/2020/10/dns-%E7%9C%9F%E4%BF%82.html">Mobile Magazine HK</a> 報導，三星 Note 20U 更新已解決 DNS 問題<br>
+2020年10月16日：<a href="https://www.eprice.com.hk/mobile/talk/4523/216942/1/">ePrice</a> 報導三星「亡羊補牢」<br>
+<table>
+<tbody>
+<tr>
+<td>兩者皆比討論區眾用戶早，差不多時間搶先報導三星 Note 20U 更新已解決 114 DNS 問題 （前者之前在事件引起關注後沒有報導過此事），但同時都沒有提及後來證實沒有修正的 <code>qq.com</code> 問題。而在 16 日，一天內三星多個型號相繼收到更新（當然更新內容沒有提及 DNS 問題），之後討論區雖發覺 <code>qq.com</code> 問題依然存在，有用戶讚賞三星反應快速...</td>
+</tr>
+</tbody>
+</table>
+由於事件從未獲官方承認，其性質在主流傳媒始終維持在「網傳」的階段，即使經大量測試屬實，甚至源碼被繹出，由於沒有相關權威或專業的認證，事件在討論區外沒有廣泛關注，在外地論壇，事件更被當作陰謀論處理，帖文被刪。本地主流傳媒在蘋果之後再沒有跟進（更新：<a href="https://news.mingpao.com/pns/%E6%B8%AF%E8%81%9E/article/20201017/s00002/1602871552809/playstation%E6%9B%B4%E6%96%B0%E6%A2%9D%E6%AC%BE-%E5%85%A7%E5%9C%B0%E7%94%A8%E6%88%B6%E9%A0%88%E5%90%8C%E6%84%8F%E4%B8%8D%E5%8D%B1%E5%AE%B3%E5%9C%8B%E5%AE%89">明報</a>10月17日有報導，不過只有輕輕一段附於其他新聞內）。卓越的公關技巧又一次發揮威力，將技術及政治上皆屬敏感的問題化解於無形。<br>
+<p>不知眾多客戶的經過此事，對三星手機的使用體驗又提升了多少呢。</p>
+<hr />
+<h3>三星 10 月更新所作的修正</h3>
+回到正題，三星 10 月中推出最新的 Note 10+ firmware，當中 <code>wifi-service.jar</code> 反編繹源碼已上載到 <a href="https://github.com/headuck/SM-N9750-TGY-Oct20">https://github.com/headuck/SM-N9750-TGY-Oct20</a>。當中問題所在的 <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java">WifiConnectivityMonitor</a>，在判別是否插入 DNS 時，只會直接檢查手機本身的 <code>CountryISO</code>（以下行號屬 <a href="https://github.com/headuck/SM-N9750-TGY-Oct20/blob/main/com/android/server/wifi/WifiConnectivityMonitor.java">WifiConnectivityMonitor.java</a> 檔案）：<br>
+135 行，114 IP 依然健在：<br>
+<pre>private static final String CHN_PUBLIC_DNS_IP = "114.114.114.114";
+</pre>
+1738 行，原本以<code>inChinaNetwork()</code>來判斷是否用 114，現在改為新的<code>isNetworkNeedChnPublicDns()</code>：<br>
+<pre>if (WifiConnectivityMonitor.this.mWifiManager != null &amp;&amp; WifiConnectivityMonitor.this.isNetworkNeedChnPublicDns()) {
+    Message msg = new Message();<br>
+    msg.what = 330;<br>
+    Bundle args = new Bundle();<br>
+    args.putString("publicDnsServer", WifiConnectivityMonitor.CHN_PUBLIC_DNS_IP);<br>
+    msg.obj = args;<br>
+    WifiConnectivityMonitor.this.mWifiManager.callSECApi(msg);<br>
+}</pre>
+<code>isNetworkNeedChnPublicDns()</code>在 8880 行
+<pre>private boolean isNetworkNeedChnPublicDns() {
+    try {<br>
+        String countryCode = SemCscFeature.getInstance().getString("CountryISO").toLowerCase();<br>
+        if (DBG) {<br>
+            Log.d(TAG, "Public DNS via Property(CSC) : countryCode: " + countryCode);<br>
+        }<br>
+        if (countryCode == null || countryCode.length() != 2 || !"cn".equalsIgnoreCase(countryCode)) {<br>
+            return false;<br>
+        }<br>
+        return true;<br>
+    } catch (Exception e) {<br>
+        return false;<br>
+    }<br>
+}</pre>
+可見已改為用手機的 CountryISO 碼並只限於 "cn" 才會返回 <code>true</code>，港行機即使連接了大陸流動網絡亦沒有問題。<br>
+另一方面，之前文章 <a href="/2020/10/12/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part1).html">Part 1</a> 提及的 <code>inChinaNetwork()</code> 及 <code>isChineseIso()</code> 同樣健在，見 8897 行。 前文 <a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">Part 2</a> 提及的 DNS query 機制，仍然使用 <code>inChinaNetwork()</code>，即港行三星手機或連接香港網絡的三星手機，仍會每分鐘向手機設定的每個 DNS 伺服器，查詢 <code>qq.com</code>，這方面沒有改動。<br>
+三星不是最直接地將 <code>inChinaNetwork()</code> 改為目前 <code>isNetworkNeedChnPublicDns()</code> 的內容，而是特別拆開兩種處理方法，即有意保留原有的 <code>qq.com</code>查詢的做法（不將其改為 <code>google.com</code>），原因令人費解。<br>
+<del>現時除非有其他未被發現的情況，否則已消除將瀏覽網站連用戶 IP 送上大陸的問題，</del>不過用戶若介懷手機使用 WiFi 時不斷作 <code>qq.com</code> 的查詢（事實上這是不必要的），（17/10 7pm 更新）<strong>以及可能查詢並連接 <code>www.qq.com</code>, <code>www.baidu.com</code>, <code>m.taobao.com</code>, <code>m.hao123.com</code> 以及 <code>connectivity.samsung.com.cn</code></strong>，可以按<a href="/2020/10/15/HowSamsungphonesforceMainlandChinaDNSserviceuponHongKongWiFiusers(Part2).html">前文</a>末段的方法，在家中 WiFi 名稱中加入 <code>DIRECT-</code> 及 <code>:NEX-</code>，如 <code>DIRECT-:NEX-Home</code>。
+<p>而即使非三星用戶，如果以 mobile network 開 tethering 給三星手機分享，將 hotspot 名稱加入上述字串，或可節省些少流量?。</p>
+<strong>（17/10 7pm 更新﹕已證實有用戶發現的 <code>baidu.com</code> 及 <code>taobao.com</code> 等的 DNS 查詢<span style="text-decoration: underline;">甚至連接</span>，亦是來自三星原廠 firmware，源自其對 Google 原生 <code>NetworkMonitor</code> 的修改，在 captive portal detection 時自行加料。相關連接可以由前文的 DNS checking loop 在某些情況下（如訊號強弱）觸發。上述更改 SSID 方式可減少觸發機會</strong><strong>。要停止須在要接駁的 WiFi 連接，設定使用PAC，詳情將在 <a href="/2020/10/23/HowSamsungdevicesconnectWiFiusersinHongKongandpossiblyWorldwidetoTencent,Baidu,TaobaoandHao123.html">Part 3</a> 解釋。）</strong><span style="color: #0000ff;">
+</span>
+<p>&nbsp;</p>

@@ -1,0 +1,16 @@
+---
+layout: post
+title: "Recyclerview layout"
+date: 2016-01-06 15:26:37
+categories: []
+menu_parent: none
+order: 0
+tags: []
+wordpress_id: 134
+---
+細screen出現問題（第三隻）<br>
+<a href="/assets/uploads/2016/01/Screenshot_20160106-142747.png"><img class="alignnone size-full wp-image-135" src="/assets/uploads/2016/01/Screenshot_20160106-142747.png" alt="Screenshot_20160106-142747" width="480" height="800" /></a>
+找到之前<code>RecyclerView</code>set左<code>setHasFixedSize(true)</code>，（每隻View一樣Size），以為係因為咁，recycle左細的既layout，唔夠位。<br>
+但係唔要<code>setHasFixedSize(true)</code>之後，情況一樣。<br>
+原來係電話號碼的<code>TextView</code>的<code>layout_width</code>用了<code>match_parent</code>，改做<code>wrap_content</code>就無事。<br>
+<p>？？</p>
