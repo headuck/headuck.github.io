@@ -32,13 +32,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      # NEW: public content repo, no token needed
-      - name: Checkout F-Droid repo
-        uses: actions/checkout@v5
-        with:
-          repository: headuck/fdroid
-          path: _fdroid
-          fetch-depth: 1
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -55,11 +48,6 @@ jobs:
         run: bundle exec jekyll build --baseurl ""
         env:
           JEKYLL_ENV: production
-      - name: Include F-Droid repo
-        run: |
-          mkdir -p _site/fdroid
-          cp -a _fdroid/repo _site/fdroid/repo
-          test -f _site/fdroid/repo/index-v2.json
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 

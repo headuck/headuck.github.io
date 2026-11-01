@@ -86,15 +86,98 @@
         color: #1c1d1f !important;
         text-decoration: none !important;
       }
+
+      /* ---------- 手機版：漢堡選單 + 側欄抽屜 ---------- */
+      /* 手機頂欄與遮罩，桌面隱藏 */
+      .hd-mobile-bar { display: none; }
+      .hd-menu-backdrop { display: none; }
+
+      .hd-menu-toggle {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 40px; height: 40px; padding: 0; margin-right: 4px;
+        background: transparent; border: 0; border-radius: 8px;
+        color: var(--wp--preset--color--white); cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .hd-menu-toggle:active { background: rgba(255,255,255,0.12); }
+      .hd-burger { display: block; width: 22px; height: 16px; position: relative; }
+      .hd-burger span {
+        position: absolute; left: 0; width: 100%; height: 2px; border-radius: 2px;
+        background: currentColor; transition: transform 0.25s ease, opacity 0.2s ease, top 0.25s ease;
+      }
+      .hd-burger span:nth-child(1) { top: 0; }
+      .hd-burger span:nth-child(2) { top: 7px; }
+      .hd-burger span:nth-child(3) { top: 14px; }
+      .hd-menu-toggle[aria-expanded="true"] .hd-burger span:nth-child(1) { top: 7px; transform: rotate(45deg); }
+      .hd-menu-toggle[aria-expanded="true"] .hd-burger span:nth-child(2) { opacity: 0; }
+      .hd-menu-toggle[aria-expanded="true"] .hd-burger span:nth-child(3) { top: 7px; transform: rotate(-45deg); }
+
+      @media (max-width: 900px) {
+        .hd-mobile-bar {
+          display: flex; align-items: center; gap: 6px;
+          position: sticky; top: 0; z-index: 1002;
+          height: 56px; padding: 0 12px; box-sizing: border-box;
+          background: rgba(1, 25, 56, 0.96);
+          -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .hd-mobile-title {
+          color: var(--wp--preset--color--white) !important;
+          font-weight: bold; font-size: 1.05em; letter-spacing: -0.3px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        .hd-main-container { margin: 20px auto 40px; padding: 0 18px; }
+
+        .hd-sidebar {
+          position: fixed; top: 0; left: 0; bottom: 0;
+          width: 280px; max-width: 82vw; min-width: 0;
+          height: 100%; padding: 74px 22px 40px; overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          background: #01122b; border-right: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 4px 0 24px rgba(0,0,0,0.55);
+          transform: translateX(-100%); transition: transform 0.28s ease;
+          z-index: 1001; box-sizing: border-box;
+        }
+        .hd-sidebar.is-open { transform: translateX(0); }
+
+        .hd-menu-backdrop {
+          display: block; position: fixed; inset: 0; z-index: 1000;
+          background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none;
+          transition: opacity 0.28s ease;
+        }
+        .hd-menu-backdrop.is-open { opacity: 1; pointer-events: auto; }
+
+        .hd-content-panel { padding-left: 0; }
+        .hd-article-card h1 { font-size: 1.75em !important; letter-spacing: 0 !important; }
+      }
+
+      @media (max-width: 420px) {
+        .hd-main-container { padding: 0 14px; }
+        .hd-article-card h1 { font-size: 1.5em !important; }
+      }
+
+      /* 開啟選單時鎖住背景捲動 */
+      body.hd-menu-open { overflow: hidden; }
     </style>
   </head>
 
   <body>
 
+    <header class="hd-mobile-bar">
+      <button class="hd-menu-toggle" id="hdMenuToggle" type="button"
+              aria-controls="hdSidebar" aria-expanded="false" aria-label="開啟選單">
+        <span class="hd-burger" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <a class="hd-mobile-title" href="/">HeaDuck研究所</a>
+    </header>
+
+    <div class="hd-menu-backdrop" id="hdMenuBackdrop" aria-hidden="true"></div>
+
     <div class="hd-main-container">
       
       <!-- 1. 左側自訂選單側邊欄 -->
-      <aside class="hd-sidebar">
+      <aside class="hd-sidebar" id="hdSidebar">
         
         <h2 style="font-size: 1.4em; margin: 0 0 30px 0; font-weight: bold;"><a href="/">HeaDuck研究所</a></h2>
 
@@ -165,6 +248,42 @@
     <footer style="text-align: center; margin-top: 100px; padding: 25px 0; border-top: 1px solid rgba(255,255,255,0.1); color: #abb8c3; font-size: 0.85em;">
       &copy; {{ "now" | date: "%Y" }} HeaDuck研究所
     </footer>
+
+    <script>
+      (function () {
+        var toggle   = document.getElementById('hdMenuToggle');
+        var sidebar  = document.getElementById('hdSidebar');
+        var backdrop = document.getElementById('hdMenuBackdrop');
+        if (!toggle || !sidebar || !backdrop) return;
+
+        function setOpen(open) {
+          sidebar.classList.toggle('is-open', open);
+          backdrop.classList.toggle('is-open', open);
+          document.body.classList.toggle('hd-menu-open', open);
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          toggle.setAttribute('aria-label', open ? '關閉選單' : '開啟選單');
+        }
+
+        toggle.addEventListener('click', function () {
+          setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+        });
+        backdrop.addEventListener('click', function () { setOpen(false); });
+
+        // 點選選單內的連結後自動收起
+        sidebar.addEventListener('click', function (e) {
+          if (e.target.closest('a')) setOpen(false);
+        });
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') setOpen(false);
+        });
+
+        // 轉回桌面寬度時重設狀態
+        window.addEventListener('resize', function () {
+          if (window.innerWidth > 900) setOpen(false);
+        });
+      })();
+    </script>
 
   </body>
 </html>
