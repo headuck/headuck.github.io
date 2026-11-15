@@ -1,0 +1,121 @@
+{%- comment -%}
+  Structured data for the site, the home page and blog posts.
+  Keep the FAQ text here in sync with the visible FAQ in index.md.
+{%- endcomment -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "{{ site.url }}/#website",
+  "url": {{ site.url | append: '/' | jsonify }},
+  "name": {{ site.title | jsonify }},
+  "description": {{ site.description | jsonify }},
+  "inLanguage": "zh-Hant-HK",
+  "publisher": { "@id": "{{ site.url }}/#organization" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "{{ site.url }}/#organization",
+  "name": {{ site.title | jsonify }},
+  "url": {{ site.url | append: '/' | jsonify }},
+  "logo": {
+    "@type": "ImageObject",
+    "url": {{ '/assets/uploads/2018/12/iconHeaduck.png' | absolute_url | jsonify }},
+    "width": 402,
+    "height": 401
+  },
+  "sameAs": [
+    "https://github.com/headuck"
+  ]
+}
+</script>
+{%- if page.url == '/' %}
+{%- assign hd_apk = '/2016/02/13/小鴨幹線0226-APK下載.html' | absolute_url %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "小鴨幹線",
+  "alternateName": "Headuck Call Blocker",
+  "description": {{ include.description | default: site.description | jsonify }},
+  "url": {{ site.url | append: '/' | jsonify }},
+  "downloadUrl": {{ hd_apk | jsonify }},
+  "applicationCategory": "UtilitiesApplication",
+  "applicationSubCategory": "Call Blocker",
+  "operatingSystem": "Android",
+  "softwareVersion": "0.2.27",
+  "dateModified": "2026-10-31",
+  "inLanguage": "zh-Hant-HK",
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "HKD",
+    "availability": "https://schema.org/InStock"
+  },
+  "publisher": { "@id": "{{ site.url }}/#organization" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "zh-Hant-HK",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "「小鴨幹線」是否免費？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "是。「小鴨幹線」無廣告、唔收費、毋須註冊，亦不會要求無關權限。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "在哪裡可以下載「小鴨幹線」？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可從本網站下載 APK、透過「小鴨幹線」專屬 F-Droid 軟體庫安裝，或從 Uptodown 更新。「小鴨幹線」已於 2024 年 11 月從 Google Play 下架。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "「小鴨幹線」會否收集或上載個人資料？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。「小鴨幹線」不會收集或上載用戶個人資料及通訊錄，來電辨識在用戶手機上進行。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "如何更新「小鴨幹線」？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "從本網站下載的版本日後須手動更新；使用專屬 F-Droid 軟體庫的用戶可設定自動檢查及更新。"
+      }
+    }
+  ]
+}
+</script>
+{%- elsif page.collection == 'posts' %}
+{%- unless page.categories contains 'pages' %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": {{ page.title | jsonify }},
+  "description": {{ include.description | default: site.description | jsonify }},
+  "datePublished": {{ page.date | date_to_xmlschema | jsonify }},
+  "dateModified": {{ page.last_modified_at | default: page.date | date_to_xmlschema | jsonify }},
+  "mainEntityOfPage": {{ page.url | absolute_url | jsonify }},
+  "inLanguage": "zh-Hant-HK",
+  "author": { "@id": "{{ site.url }}/#organization" },
+  "publisher": { "@id": "{{ site.url }}/#organization" },
+  "image": {{ '/assets/uploads/2018/12/iconHeaduck.png' | absolute_url | jsonify }}
+}
+</script>
+{%- endunless %}
+{%- endif %}

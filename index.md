@@ -1,10 +1,13 @@
 ---
 layout: default
 title: 「小鴨幹線」 來電攔截及防騙App - 無廣告，唔收費，唔要求過份權限
+description: 「小鴨幹線」是香港製造的 Android 來電攔截及防騙 App，無廣告、唔收費、毋須註冊，不會上載個人資料或通訊錄。支援 HKJunkCall 資料庫、自訂黑名單、匿名來電及詐騙來電攔截。
 permalink: /
+last_modified_at: 2026-11-15
+homepage_custom: true
 ---
 <!-- wp:image {"id":889,"linkDestination":"custom","align":"center"} -->
-<figure class="wp-block-image aligncenter"><a href="/2016/02/13/小鴨幹線0226-APK下載.html"><img src="/assets/uploads/2018/12/iconHeaduck.png" alt="" class="wp-image-889"/></a></figure>
+<figure class="wp-block-image aligncenter"><a href="/2016/02/13/小鴨幹線0226-APK下載.html"><img src="/assets/uploads/2018/12/iconHeaduck.png" alt="「小鴨幹線」來電攔截 App 圖示" class="wp-image-889" width="402" height="401"/></a></figure>
 <!-- /wp:image -->
 
 <!-- wp:heading -->
@@ -24,6 +27,8 @@ permalink: /
 <li>從 <a href="https://headuck-call-blocker.en.uptodown.com/">Uptodown</a>更新 (提供第三方驗證，所下載檔案經 VirusTotal 的掃描結果)</li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list -->
+
+<p><strong>最新版本：0.2.27</strong>（2026 年 10 月 31 日）— <a href="/2026/10/31/小鴨幹線-開發版0227修復下載問題.html">查看 0.2.27 更新內容</a></p>
 
 <!-- wp:paragraph -->
 <p>
@@ -169,3 +174,35 @@ permalink: /
 <li>沒有廣告商軟件及計費等「功能」，程式只有約3MB，<strong>節省空間，耗電及數據流量</strong>。</li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list -->
+
+<h2 class="wp-block-heading">為何選擇「小鴨幹線」</h2>
+<p>「小鴨幹線」由香港開發者製作，針對香港常見的推銷、詐騙及滋擾來電而設。與一般只靠黑名單的攔截程式不同，它同時提供 HKJunkCall 資料庫辨識、自訂名單、匿名來電處理、+852 及無效 IDD 來電警告，以及警方防騙訊息，讓用戶可按自己的需要調整攔截方式。</p>
+<p>程式以私隱為先：來電辨識在手機上進行，不需要把陌生來電號碼上傳到伺服器，亦不設廣告或強制註冊。對於重視私隱、又不希望被推銷電話騷擾的香港用戶，「小鴨幹線」是一個免費而實用的選擇。</p>
+
+<h2 class="wp-block-heading">運作方式</h2>
+<ol class="wp-block-list">
+<li>安裝後授予所需的來電及聯絡人權限，程式會在下載廣告電話名單時一併更新資料庫。</li>
+<li>來電時，程式會按 HKJunkCall 資料庫、自訂黑名單及你的攔截設定，判斷是否提示或攔截。</li>
+<li>你可以在設定中調整攔截方式、例外名稱、更新頻率及回報選項，亦可隨時匯出自訂名單。</li>
+</ol>
+
+<h2 class="wp-block-heading">常見問題</h2>
+<h3>「小鴨幹線」是否免費？</h3>
+<p>是。「小鴨幹線」無廣告、唔收費、毋須註冊，亦不會要求無關權限。</p>
+<h3>在哪裡可以下載「小鴨幹線」？</h3>
+<p>可從本網站下載 APK、透過「小鴨幹線」專屬 F-Droid 軟體庫安裝，或從 Uptodown 更新。「小鴨幹線」已於 2024 年 11 月從 Google Play 下架。</p>
+<h3>「小鴨幹線」會否收集或上載個人資料？</h3>
+<p>不會。「小鴨幹線」不會收集或上載用戶個人資料及通訊錄，來電辨識在用戶手機上進行。</p>
+<h3>如何更新「小鴨幹線」？</h3>
+<p>從本網站下載的版本日後須手動更新；使用專屬 F-Droid 軟體庫的用戶可設定自動檢查及更新。</p>
+
+<h2 class="wp-block-heading">更多指南</h2>
+<ul class="wp-block-list">
+<li><a href="/2016/02/13/小鴨幹線0226-APK下載.html">下載最新 APK 及安裝步驟</a></li>
+<li><a href="/2016/02/02/小鴨幹線版本02說明.html">版本 0.2 功能及權限說明</a></li>
+<li><a href="/2017/03/15/小鴨幹線-私隱和安全(UserPrivacyandSecurity).html">私隱和安全說明</a></li>
+<li><a href="/2016/08/29/小鴨幹線-常見問題匯編.html">常見問題匯編</a></li>
+<li><a href="/2016/08/29/小鴨幹線-非標準ROM-聲稱省電軟件使用者必讀.html">非標準 ROM／省電軟件使用者必讀</a></li>
+<li><a href="/2024/05/17/使用HKJunkCall電話攔截程式的服務資料.html">香港攔截程式比較</a></li>
+<li><a href="/2024/06/14/小鴨幹線-專屬F-droid軟體庫啟用.html">啟用「小鴨幹線」專屬 F-Droid 軟體庫</a></li>
+</ul>
